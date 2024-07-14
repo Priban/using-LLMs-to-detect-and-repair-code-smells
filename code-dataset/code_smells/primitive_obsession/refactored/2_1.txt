@@ -1,0 +1,138 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Long Function**: The `getBalance` method in the `BankAccount` class is doing too much.
+2. **Primitive Obsession**: The `amountWithCurrency` field in the `Transaction` class is a string that combines both amount and currency.
+3. **Data Clumps**: The `description` and `amountWithCurrency` parameters are always passed together.
+4. **Mysterious Name**: The `amountWithCurrency` name is not very clear.
+
+### Step 2: Definition of the Code Smells
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Primitive Obsession**: Using primitive data types to represent domain ideas, which can lead to unclear code and lack of encapsulation.
+3. **Data Clumps**: Groups of data that are often passed together, indicating that they should be part of a single object.
+4. **Mysterious Name**: A variable or method name that does not clearly indicate its purpose or content.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Steps:
+
+1. **Extract Method**: Break down the `getBalance` method into smaller methods.
+2. **Introduce Parameter Object**: Create a class to encapsulate `amountWithCurrency`.
+3. **Rename Variables**: Use more descriptive names.
+
+#### Refactored Code:
+
+```javascript
+class Money {
+  constructor(amount, currency) {
+    this.amount = amount;
+    this.currency = currency;
+  }
+
+  static fromString(amountWithCurrency) {
+    const currency = amountWithCurrency.charAt(0);
+    const amount = parseFloat(amountWithCurrency.substring(1));
+    return new Money(amount, currency);
+  }
+
+  toString() {
+    return `${this.currency}${this.amount.toFixed(2)}`;
+  }
+}
+
+class Transaction {
+  constructor(description, money) {
+    this.description = description;
+    this.money = money;
+  }
+
+  printTransaction() {
+    console.log(`Transaction: ${this.description}, Amount: ${this.money.toString()}`);
+  }
+}
+
+class BankAccount {
+  constructor(accountNumber, accountHolder) {
+    this.accountNumber = accountNumber;
+    this.accountHolder = accountHolder;
+    this.transactions = [];
+  }
+
+  addTransaction(description, amountWithCurrency) {
+    const money = Money.fromString(amountWithCurrency);
+    const transaction = new Transaction(description, money);
+    this.transactions.push(transaction);
+    console.log(`Added transaction: ${description}, Amount: ${money.toString()}`);
+  }
+
+  getBalance() {
+    const balance = this.calculateBalance();
+    return `$${balance.toFixed(2)}`;
+  }
+
+  calculateBalance() {
+    let balance = 0.0;
+    this.transactions.forEach(transaction => {
+      if (transaction.money.currency === '$') {
+        balance += transaction.money.amount;
+      } else {
+        console.log(`Unsupported currency: ${transaction.money.currency}`);
+      }
+    });
+    return balance;
+  }
+
+  printAccountSummary() {
+    console.log(`Account Number: ${this.accountNumber}, Account Holder: ${this.accountHolder}`);
+    console.log('Transactions:');
+    this.transactions.forEach(transaction => transaction.printTransaction());
+    console.log(`Current Balance: ${this.getBalance()}`);
+  }
+}
+
+class API {
+  constructor() {
+    this.bankAccount = null;
+  }
+
+  createAccount(accountNumber, accountHolder) {
+    this.bankAccount = new BankAccount(accountNumber, accountHolder);
+  }
+
+  addTransaction(description, amountWithCurrency) {
+    if (this.bankAccount) {
+      this.bankAccount.addTransaction(description, amountWithCurrency);
+    } else {
+      throw new Error('Bank account not created');
+    }
+  }
+
+  getBalance() {
+    if (this.bankAccount) {
+      return this.bankAccount.getBalance();
+    } else {
+      throw new Error('Bank account not created');
+    }
+  }
+
+  printAccountSummary() {
+    if (this.bankAccount) {
+      this.bankAccount.printAccountSummary();
+    } else {
+      throw new Error('Bank account not created');
+    }
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Changes:
+
+1. **Money Class**: Introduced a `Money` class to encapsulate the amount and currency, addressing the Primitive Obsession and Data Clumps smells.
+2. **Transaction Class**: Updated to use the `Money` class.
+3. **BankAccount Class**: Refactored `getBalance` to use a helper method `calculateBalance` to improve readability.
+4. **Renaming**: Used more descriptive names for variables and methods.
+
+The refactored code maintains the same external behavior and should pass all the existing tests.

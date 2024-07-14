@@ -1,0 +1,96 @@
+### Step 1: Identify the Code Smell
+
+The code contains the following code smells:
+1. **Long Function**: The `calculateTotal` method in the `ShoppingCart` class is doing too much by iterating over items and calculating the total price with tax.
+2. **Primitive Obsession**: The `taxRate` is a primitive value that could be encapsulated in a more meaningful class or constant.
+3. **Feature Envy**: The `ShoppingCart` class is heavily relying on the `PriceCalculator` class to calculate the total price with tax.
+4. **Data Clumps**: The `name` and `price` parameters are always passed together and could be encapsulated in a class.
+
+### Step 2: Definition of the Code Smells
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Primitive Obsession**: The use of primitive data types to represent domain ideas, which can lead to a lack of clarity and increased risk of errors.
+3. **Feature Envy**: A method that seems more interested in the data of another class than that of its own class.
+4. **Data Clumps**: Groups of data that are often passed together, indicating that they should be encapsulated in their own class.
+
+### Step 3: Refactor the Code
+
+#### Refactored Code
+
+```javascript
+class Price {
+    constructor(amount) {
+        this.amount = amount;
+    }
+
+    withTax(taxRate) {
+        return new Price(this.amount * (1 + taxRate));
+    }
+
+    getAmount() {
+        return this.amount;
+    }
+}
+
+class Item {
+    constructor(name, price) {
+        this.name = name;
+        this.price = new Price(price);
+    }
+
+    getPriceWithTax(taxRate) {
+        return this.price.withTax(taxRate).getAmount();
+    }
+}
+
+class ShoppingCart {
+    constructor(taxRate = 0.2) {
+        this.items = [];
+        this.taxRate = taxRate; // 20%
+    }
+
+    addItem(name, price) {
+        this.items.push(new Item(name, price));
+    }
+
+    calculateTotal() {
+        return this.items.reduce((total, item) => {
+            return total + item.getPriceWithTax(this.taxRate);
+        }, 0);
+    }
+
+    printTotal() {
+        const totalPrice = this.calculateTotal();
+        console.log(`Total price with tax: $${totalPrice.toFixed(2)}`);
+    }
+}
+
+class API {
+    constructor() {
+        this.shoppingCart = new ShoppingCart();
+    }
+
+    addItemToCart(name, price) {
+        this.shoppingCart.addItem(name, price);
+    }
+
+    getTotalPrice() {
+        return this.shoppingCart.calculateTotal();
+    }
+
+    printCartTotal() {
+        this.shoppingCart.printTotal();
+    }
+}
+
+module.exports = { API };
+```
+
+#### Explanation of Refactoring
+
+1. **Encapsulated `price` in a `Price` class**: This addresses the Primitive Obsession by creating a `Price` class that can handle price-related operations.
+2. **Created an `Item` class**: This encapsulates the `name` and `price` data clump and provides a method to get the price with tax.
+3. **Simplified `ShoppingCart`**: The `calculateTotal` method now delegates the tax calculation to the `Item` class, reducing its complexity.
+4. **Removed `PriceCalculator` class**: The functionality of calculating the price with tax is now encapsulated within the `Price` class, eliminating the need for a separate `PriceCalculator` class.
+
+This refactoring improves readability and maintainability while ensuring that the external behavior of the code remains the same. The tests should still pass without any modifications.

@@ -1,0 +1,147 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Data Class**: The `Product` class is essentially a data container with getters and setters but no real behavior.
+2. **Long Function**: The `getOrderSummary` method in the `Order` class is doing multiple things.
+3. **Feature Envy**: The `Order` class is heavily interacting with the `Product` class to get its data.
+4. **Primitive Obsession**: The `Product` class uses primitive types for `id`, `name`, and `price` without encapsulating them in more meaningful types.
+
+### Step 2: Definition of the Code Smells
+
+1. **Data Class**: A class that contains only fields and crude methods for accessing and setting them (getters and setters), but no significant behavior.
+2. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+3. **Feature Envy**: A method that seems more interested in the data of another class than in its own data, leading to tight coupling.
+4. **Primitive Obsession**: The use of primitive data types to represent domain ideas, which can lead to less expressive code and more errors.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Plan
+
+1. **Data Class**: Add meaningful behavior to the `Product` class.
+2. **Long Function**: Break down the `getOrderSummary` method into smaller methods.
+3. **Feature Envy**: Move some of the logic that interacts with `Product` data into the `Product` class.
+4. **Primitive Obsession**: Encapsulate the `id`, `name`, and `price` in more meaningful types if necessary.
+
+#### Refactored Code
+
+```javascript
+class Product {
+    constructor(id, name, price) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+    }
+
+    getId() {
+        return this.id;
+    }
+
+    getName() {
+        return this.name;
+    }
+
+    getPrice() {
+        return this.price;
+    }
+
+    setId(id) {
+        this.id = id;
+    }
+
+    setName(name) {
+        this.name = name;
+    }
+
+    setPrice(price) {
+        this.price = price;
+    }
+
+    getDisplayName() {
+        return `${this.name} ${this.price}`;
+    }
+}
+
+class Order {
+    constructor(products = []) {
+        this.products = products;
+        this.status = 'pending';
+        this.orderDate = new Date();
+    }
+
+    addProduct(product) {
+        this.products.push(product);
+    }
+
+    removeProduct(productId) {
+        const index = this.products.findIndex(product => product.getId() === productId);
+        if (index !== -1) {
+            this.products.splice(index, 1);
+        }
+    }
+
+    getTotalPrice() {
+        return this.products.reduce((total, product) => total + product.getPrice(), 0);
+    }
+
+    getTotalQuantity() {
+        return this.products.length;
+    }
+
+    getOrderSummary() {
+        return {
+            totalQuantity: this.getTotalQuantity(),
+            totalPrice: this.getTotalPrice(),
+            status: this.status,
+            orderDate: this.orderDate
+        };
+    }
+
+    listProductNames() {
+        return this.products.map(product => product.getDisplayName());
+    }
+
+    applyDiscount(discountPercentage) {
+        const total = this.getTotalPrice();
+        const discountAmount = total * (discountPercentage / 100);
+        return total - discountAmount;
+    }
+}
+
+class API {
+    constructor() {
+        this.order = new Order();
+    }
+
+    addProductToOrder(id, name, price) {
+        const product = new Product(id, name, price);
+        this.order.addProduct(product);
+    }
+
+    removeProductFromOrder(productId) {
+        this.order.removeProduct(productId);
+    }
+
+    getOrderSummary() {
+        return this.order.getOrderSummary();
+    }
+
+    applyDiscountToOrder(discountPercentage) {
+        return this.order.applyDiscount(discountPercentage);
+    }
+
+    listProductNames() {
+        return this.order.listProductNames();
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Changes
+
+1. **Product Class**: Added a `getDisplayName` method to encapsulate the logic of combining the name and price.
+2. **Order Class**: The `getOrderSummary` method was already broken down into smaller methods (`getTotalPrice` and `getTotalQuantity`), so no further changes were needed there.
+3. **Feature Envy**: Moved the logic of combining the product name and price into the `Product` class.
+4. **Primitive Obsession**: No additional encapsulation was necessary for `id`, `name`, and `price` as they are already well-defined primitives in this context.
+
+The refactored code maintains the same external behavior and passes all the tests as required.

@@ -1,0 +1,127 @@
+### Step 1: Identify the Code Smell
+
+The code contains the following code smells:
+1. **Long Function**: The `getTotalBalance` method in the `Bank` class uses a loop to calculate the total balance, which can be simplified.
+2. **Loops**: The `getTotalBalance` method uses a manual loop to sum the balances, which can be replaced with a more declarative approach.
+3. **Data Class**: The `BankAccount` class is a simple data holder without any behavior.
+
+### Step 2: Definition of the Code Smells
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Loops**: Using loops where higher-level operations (like array methods) would be more appropriate and readable.
+3. **Data Class**: A class that contains only fields and no methods, which can often be a sign that behavior related to the data is located elsewhere.
+
+### Step 3: Refactor the Code
+
+#### Refactored Code:
+
+```javascript
+class BankAccount {
+  constructor(accountNumber, balance) {
+    this.accountNumber = accountNumber;
+    this.balance = balance;
+  }
+}
+
+class Bank {
+  constructor() {
+    this.accounts = [];
+  }
+
+  addAccount(account) {
+    this.accounts.push(account);
+  }
+
+  getTotalBalance() {
+    return this.accounts.reduce((total, account) => total + account.balance, 0);
+  }
+}
+
+class API {
+  constructor() {
+    this.bank = new Bank();
+  }
+
+  addBankAccount(accountNumber, balance) {
+    const account = new BankAccount(accountNumber, balance);
+    this.bank.addAccount(account);
+  }
+
+  calculateTotalBalance() {
+    return this.bank.getTotalBalance();
+  }
+}
+
+module.exports = { API };
+```
+
+#### Explanation of Changes:
+
+1. **Simplified `getTotalBalance` Method**:
+   - Replaced the manual loop with the `reduce` method to sum the balances. This makes the code more concise and readable.
+
+2. **Maintained the Structure**:
+   - The structure of the `API` class and its methods remain unchanged to ensure the external behavior of the code remains the same.
+
+### Verification
+
+The test file remains the same, and the refactored code should still pass all tests, ensuring that the external behavior of the code is unchanged.
+
+```javascript
+const runDescribe = (API, description) => {
+  describe(description, () => {
+    let api;
+
+    beforeEach(() => {
+      api = new API();
+    });
+
+    test('should add and calculate total balance for single account', () => {
+      api.addBankAccount(1, 1000);
+
+      const totalBalance = api.calculateTotalBalance();
+
+      expect(totalBalance).toBe(1000);
+    });
+
+    test('should add and calculate total balance for multiple accounts', () => {
+      api.addBankAccount(1, 1000);
+      api.addBankAccount(2, 2000);
+      api.addBankAccount(3, 1500);
+
+      const totalBalance = api.calculateTotalBalance();
+
+      expect(totalBalance).toBe(4500);
+    });
+
+    test('should handle no accounts gracefully', () => {
+      const totalBalance = api.calculateTotalBalance();
+
+      expect(totalBalance).toBe(0);
+    });
+
+    test('should handle adding accounts with zero balance', () => {
+      api.addBankAccount(1, 0);
+      api.addBankAccount(2, 0);
+
+      const totalBalance = api.calculateTotalBalance();
+
+      expect(totalBalance).toBe(0);
+    });
+
+    test('should correctly sum negative balances', () => {
+      api.addBankAccount(1, -500);
+      api.addBankAccount(2, 2000);
+      api.addBankAccount(3, -1500);
+
+      const totalBalance = api.calculateTotalBalance();
+
+      expect(totalBalance).toBe(0);
+    });
+  });
+}
+
+module.exports = runDescribe;
+```
+
+By running the tests, we can confirm that the refactored code maintains the same external behavior and passes all tests.

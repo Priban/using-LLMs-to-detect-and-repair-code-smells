@@ -1,0 +1,163 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Message Chains**: There are long chains of method calls, e.g., `this.getCustomerInfo().getBanking().getAccount().getBalance()`.
+2. **Middle Man**: Classes like `AccountDetails`, `CustomerInfo`, `PersonalDetails`, and `Banking` are acting as intermediaries without adding significant value.
+3. **Large Class**: The `Customer` and `Bank` classes are doing too much.
+4. **Data Clumps**: The `CustomerInfo` and `AccountInfo` classes are just grouping data without behavior.
+
+### Step 2: Definition of the Code Smell
+
+1. **Message Chains**: Occurs when a client asks one object for another object, which the client then asks for yet another object, and so on. This makes the code harder to read and maintain.
+2. **Middle Man**: When a class is delegating almost all of its work to another class, it becomes unnecessary and can be removed.
+3. **Large Class**: A class that has too many responsibilities, making it difficult to understand and maintain.
+4. **Data Clumps**: Groups of data that are often found together but are not encapsulated in a meaningful way.
+
+### Step 3: Refactor the Code
+
+Let's refactor the code to address these issues.
+
+#### Refactored Code
+
+```javascript
+class Funds {
+  constructor(balance) {
+    this.balance = balance;
+  }
+
+  deposit(amount) {
+    this.balance += amount;
+  }
+
+  withdraw(amount) {
+    if (amount <= this.balance) {
+      this.balance -= amount;
+    } else {
+      throw new Error("Insufficient funds");
+    }
+  }
+
+  getBalance() {
+    return this.balance;
+  }
+}
+
+class Account {
+  constructor(accountNumber, balance) {
+    this.accountNumber = accountNumber;
+    this.funds = new Funds(balance);
+  }
+
+  deposit(amount) {
+    this.funds.deposit(amount);
+  }
+
+  withdraw(amount) {
+    this.funds.withdraw(amount);
+  }
+
+  getBalance() {
+    return this.funds.getBalance();
+  }
+}
+
+class Customer {
+  constructor(name, accountNumber, initialBalance) {
+    this.name = name;
+    this.account = new Account(accountNumber, initialBalance);
+  }
+
+  getName() {
+    return this.name;
+  }
+
+  getAccountBalance() {
+    return this.account.getBalance();
+  }
+
+  depositToAccount(amount) {
+    this.account.deposit(amount);
+  }
+
+  withdrawFromAccount(amount) {
+    this.account.withdraw(amount);
+  }
+}
+
+class Bank {
+  constructor() {
+    this.customers = [];
+  }
+
+  addCustomer(customer) {
+    this.customers.push(customer);
+  }
+
+  getCustomerByName(name) {
+    return this.customers.find(customer => customer.getName() === name);
+  }
+
+  deposit(name, amount) {
+    const customer = this.getCustomerByName(name);
+    if (customer) {
+      customer.depositToAccount(amount);
+    } else {
+      throw new Error("Customer not found");
+    }
+  }
+
+  withdraw(name, amount) {
+    const customer = this.getCustomerByName(name);
+    if (customer) {
+      customer.withdrawFromAccount(amount);
+    } else {
+      throw new Error("Customer not found");
+    }
+  }
+
+  getBalance(name) {
+    const customer = this.getCustomerByName(name);
+    if (customer) {
+      return customer.getAccountBalance();
+    } else {
+      throw new Error("Customer not found");
+    }
+  }
+}
+
+class API {
+  constructor() {
+    this.bank = new Bank();
+  }
+
+  addCustomer(name, accountNumber, initialBalance) {
+    const customer = new Customer(name, accountNumber, initialBalance);
+    this.bank.addCustomer(customer);
+  }
+
+  deposit(name, amount) {
+    this.bank.deposit(name, amount);
+  }
+
+  withdraw(name, amount) {
+    this.bank.withdraw(name, amount);
+  }
+
+  getBalance(name) {
+    return this.bank.getBalance(name);
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Changes
+
+1. **Removed Middle Man Classes**: Removed `AccountDetails`, `CustomerInfo`, `PersonalDetails`, and `Banking` classes as they were just intermediaries.
+2. **Simplified Message Chains**: Directly accessed the required methods without chaining through multiple objects.
+3. **Consolidated Data**: Moved the `accountNumber` and `balance` directly into the `Account` class and `name` into the `Customer` class.
+4. **Maintained API Structure**: Ensured the `API` class structure and methods remain the same to keep the external behavior consistent.
+
+### Step 4: Verify Tests
+
+The test file remains the same, and the refactored code should pass all the tests as the external behavior of the `API` class has not changed.

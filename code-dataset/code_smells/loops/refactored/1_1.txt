@@ -1,0 +1,110 @@
+### Step 1: Identify the Code Smell in the Code
+
+The code contains several code smells:
+1. **Long Function**: The `sortProducts` method is quite long and can be broken down into smaller functions.
+2. **Loops**: The code uses explicit `for` loops for operations that can be simplified using higher-order functions like `map`, `filter`, and `find`.
+3. **Duplicated Code**: The `removeProduct`, `updateProduct`, and `findProductById` methods all iterate over the `products` array in a similar manner.
+4. **Large Class**: The `ProductCatalog` class has too many responsibilities and methods.
+
+### Step 2: Write Down the Definition of the Code Smell You Identified
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Loops**: Using explicit loops when higher-order functions can make the code more readable and concise.
+3. **Duplicated Code**: Repeating the same code in multiple places, which makes the code harder to maintain.
+4. **Large Class**: A class that has too many responsibilities, making it difficult to understand and maintain.
+
+### Step 3: Refactor the Code
+
+#### Refactored Code
+
+```javascript
+class ProductCatalog {
+  constructor() {
+    this.products = [];
+  }
+
+  addProduct(product) {
+    this.products.push(product);
+  }
+
+  removeProduct(productId) {
+    this.products = this.products.filter(product => product.id !== productId);
+  }
+
+  updateProduct(updatedProduct) {
+    this.products = this.products.map(product =>
+      product.id === updatedProduct.id ? updatedProduct : product
+    );
+  }
+
+  findProductById(productId) {
+    return this.products.find(product => product.id === productId) || null;
+  }
+
+  searchProducts(query) {
+    return this.products.filter(product =>
+      product.name.includes(query) || product.description.includes(query)
+    );
+  }
+
+  listAllProducts() {
+    return this.products;
+  }
+
+  sortProducts() {
+    this.products.sort((a, b) => {
+      if (a.price !== b.price) {
+        return a.price - b.price;
+      }
+      return a.name.localeCompare(b.name);
+    });
+  }
+}
+
+class API {
+  constructor() {
+    this.productCatalog = new ProductCatalog();
+  }
+
+  addProduct(product) {
+    this.productCatalog.addProduct(product);
+  }
+
+  removeProduct(productId) {
+    this.productCatalog.removeProduct(productId);
+  }
+
+  updateProduct(updatedProduct) {
+    this.productCatalog.updateProduct(updatedProduct);
+  }
+
+  findProductById(productId) {
+    return this.productCatalog.findProductById(productId);
+  }
+
+  searchProducts(query) {
+    return this.productCatalog.searchProducts(query);
+  }
+
+  listAllProducts() {
+    return this.productCatalog.listAllProducts();
+  }
+
+  sortProducts() {
+    this.productCatalog.sortProducts();
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring
+
+1. **Long Function**: The `sortProducts` method has been simplified using the `sort` method with a custom comparator.
+2. **Loops**: Replaced explicit `for` loops with higher-order functions like `filter`, `map`, and `find`.
+3. **Duplicated Code**: The iteration logic in `removeProduct`, `updateProduct`, and `findProductById` has been replaced with higher-order functions, reducing code duplication.
+4. **Large Class**: The `ProductCatalog` class is still large, but the methods are now more concise and focused, making it easier to understand and maintain.
+
+### Running Tests
+
+The test file remains the same, and the refactored code should pass all the tests as the external behavior of the `API` class has not changed.

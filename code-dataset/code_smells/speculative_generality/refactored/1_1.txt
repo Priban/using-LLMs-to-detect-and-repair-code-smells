@@ -1,0 +1,198 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Large Class**: The `Product` class has multiple responsibilities, including holding product data and displaying information.
+2. **Speculative Generality**: The `InventoryManager` class has methods (`exportProducts` and `importProducts`) that are placeholders for future functionality.
+3. **Long Parameter List**: The `Product` constructor and the `addProduct` method in the `API` class have long parameter lists.
+4. **Data Class**: The `Product` class is primarily used to store data without much behavior.
+
+### Step 2: Definition of the Code Smells
+
+1. **Large Class**: A class that has too many responsibilities and methods, making it difficult to understand and maintain.
+2. **Speculative Generality**: Code that is added in anticipation of future needs, which may never be needed.
+3. **Long Parameter List**: Methods or constructors that take too many parameters, making them difficult to understand and use.
+4. **Data Class**: A class that contains only fields and simple getters and setters, without any significant behavior.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Plan
+
+1. **Extract Methods**: Move the display methods out of the `Product` class to reduce its responsibilities.
+2. **Remove Speculative Generality**: Remove the placeholder methods in `InventoryManager`.
+3. **Introduce Parameter Object**: Use a parameter object to reduce the long parameter list in the `Product` constructor and `addProduct` method.
+4. **Simplify Data Class**: Keep the `Product` class as a simple data holder and move any behavior to other classes.
+
+#### Refactored Code
+
+```javascript
+class Product {
+    constructor({ id, name, price, description, category }) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.description = description;
+        this.category = category;
+    }
+}
+
+class ProductDisplay {
+    static displayBasicInfo(product) {
+        console.log(`${product.name} - $${product.price}`);
+    }
+
+    static displayDetailedInfo(product) {
+        console.log(`${product.name} - $${product.price}\nDescription: ${product.description}\nCategory: ${product.category}`);
+    }
+}
+
+class Manager {
+    constructor() {
+        this.items = [];
+    }
+
+    addItem(item) {
+        this.items.push(item);
+    }
+
+    removeItem(itemId) {
+        this.items = this.items.filter(item => item.id !== itemId);
+    }
+}
+
+class InventoryManager extends Manager {
+    constructor() {
+        super();
+    }
+
+    listProducts() {
+        this.items.forEach(product => ProductDisplay.displayBasicInfo(product));
+    }
+}
+
+class API {
+    constructor() {
+        this.inventoryManager = new InventoryManager();
+    }
+
+    addProduct(id, name, price, description, category) {
+        const product = new Product({ id, name, price, description, category });
+        this.inventoryManager.addItem(product);
+    }
+
+    removeProduct(id) {
+        this.inventoryManager.removeItem(id);
+    }
+
+    listAllProducts() {
+        return this.inventoryManager.items.map(product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            description: product.description,
+            category: product.category,
+        }));
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Changes
+
+1. **Extract Methods**: Created a `ProductDisplay` class to handle the display logic, reducing the responsibilities of the `Product` class.
+2. **Remove Speculative Generality**: Removed the `exportProducts` and `importProducts` methods from `InventoryManager`.
+3. **Introduce Parameter Object**: Changed the `Product` constructor to accept a single object parameter, reducing the long parameter list.
+4. **Simplify Data Class**: The `Product` class now only holds data, and the display logic is moved to `ProductDisplay`.
+
+### Tests
+
+The test file remains the same, ensuring that the refactored code still passes all tests and maintains the same external behavior.
+
+```javascript
+const runDescribe = (API, description) => {
+  describe(description, () => {
+    let api;
+
+    beforeEach(() => {
+      api = new API();
+    });
+
+    test('should add a product successfully', () => {
+      api.addProduct(1, 'Product 1', 100, 'Description 1', 'Category 1');
+
+      const products = api.listAllProducts();
+
+      expect(products).toHaveLength(1);
+      expect(products[0]).toEqual({
+        id: 1,
+        name: 'Product 1',
+        price: 100,
+        description: 'Description 1',
+        category: 'Category 1'
+      });
+    });
+
+    test('should remove a product successfully', () => {
+      api.addProduct(1, 'Product 1', 100, 'Description 1', 'Category 1');
+      api.addProduct(2, 'Product 2', 200, 'Description 2', 'Category 2');
+
+      api.removeProduct(1);
+      const products = api.listAllProducts();
+
+      expect(products).toHaveLength(1);
+      expect(products[0]).toEqual({
+        id: 2,
+        name: 'Product 2',
+        price: 200,
+        description: 'Description 2',
+        category: 'Category 2'
+      });
+    });
+
+    test('should list all products', () => {
+      api.addProduct(1, 'Product 1', 100, 'Description 1', 'Category 1');
+      api.addProduct(2, 'Product 2', 200, 'Description 2', 'Category 2');
+
+      const products = api.listAllProducts();
+
+      expect(products).toHaveLength(2);
+      expect(products).toEqual([
+        {
+          id: 1,
+          name: 'Product 1',
+          price: 100,
+          description: 'Description 1',
+          category: 'Category 1'
+        },
+        {
+          id: 2,
+          name: 'Product 2',
+          price: 200,
+          description: 'Description 2',
+          category: 'Category 2'
+        }
+      ]);
+    });
+
+    test('should handle removing a non-existent product gracefully', () => {
+      api.addProduct(1, 'Product 1', 100, 'Description 1', 'Category 1');
+      api.removeProduct(999);
+
+      const products = api.listAllProducts();
+
+      expect(products).toHaveLength(1);
+      expect(products[0]).toEqual({
+        id: 1,
+        name: 'Product 1',
+        price: 100,
+        description: 'Description 1',
+        category: 'Category 1'
+      });
+    });
+  });
+}
+
+module.exports = runDescribe;
+```
+
+The refactored code should now be more readable and maintainable while still passing all the tests.

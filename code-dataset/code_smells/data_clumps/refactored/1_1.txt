@@ -1,0 +1,114 @@
+### Step 1: Identify the Code Smell
+
+The code has several code smells:
+1. **Long Parameter List**: Methods like `addToCart` and `removeFromCart` in `CartModule` have long parameter lists.
+2. **Data Clumps**: The customer details (name, email, address) are passed around together in multiple methods.
+3. **Duplicated Code**: The extraction of customer details in the `API` class is repeated in multiple methods.
+
+### Step 2: Definition of the Code Smell
+
+1. **Long Parameter List**: A method or function that has too many parameters, making it difficult to understand and maintain.
+2. **Data Clumps**: Groups of data that are often passed together in multiple places, indicating that they should be encapsulated in their own class or structure.
+3. **Duplicated Code**: Code that is repeated in multiple places, making it harder to maintain and increasing the risk of bugs.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Steps:
+
+1. **Encapsulate Customer Details**: Create a `Customer` class to encapsulate the customer details.
+2. **Refactor Methods to Use Customer Object**: Update methods to use the `Customer` object instead of individual customer details.
+3. **Remove Duplicated Code**: Simplify the `API` class by removing duplicated code.
+
+Here is the refactored code:
+
+```javascript
+class Customer {
+  constructor(name, email, address) {
+    this.name = name;
+    this.email = email;
+    this.address = address;
+  }
+
+  getKey() {
+    return `${this.name}_${this.email}_${this.address}`;
+  }
+}
+
+class CartModule {
+  constructor() {
+    this.carts = {};
+  }
+
+  addToCart(productID, quantity, customer) {
+    const cart = this.getCartForCustomer(customer);
+    const product = this.getProductByID(productID);
+    if (!product) {
+      console.error('Product not found');
+      return;
+    }
+    if (product.stock < quantity) {
+      console.error('Not enough stock');
+      return;
+    }
+    cart.items.push({ productID, quantity, price: product.price });
+  }
+
+  removeFromCart(productID, quantity, customer) {
+    const cart = this.getCartForCustomer(customer);
+    const cartItemIndex = cart.items.findIndex(item => item.productID === productID);
+    if (cartItemIndex === -1) {
+      console.error('Product not in cart');
+      return;
+    }
+    const cartItem = cart.items[cartItemIndex];
+    if (cartItem.quantity <= quantity) {
+      cart.items.splice(cartItemIndex, 1);
+    } else {
+      cartItem.quantity -= quantity;
+    }
+  }
+
+  getCartForCustomer(customer) {
+    const customerKey = customer.getKey();
+    if (!this.carts[customerKey]) {
+      this.carts[customerKey] = { customerName: customer.name, customerEmail: customer.email, customerAddress: customer.address, items: [] };
+    }
+    return this.carts[customerKey];
+  }
+
+  getProductByID(productID) {
+    return { id: productID, name: `Product ${productID}`, price: 10, stock: 100 };
+  }
+}
+
+class API {
+  constructor() {
+    this.cartModule = new CartModule();
+  }
+
+  addToCart(productID, quantity, customerDetails) {
+    const customer = new Customer(customerDetails.name, customerDetails.email, customerDetails.address);
+    this.cartModule.addToCart(productID, quantity, customer);
+  }
+
+  removeFromCart(productID, quantity, customerDetails) {
+    const customer = new Customer(customerDetails.name, customerDetails.email, customerDetails.address);
+    this.cartModule.removeFromCart(productID, quantity, customer);
+  }
+
+  getCart(customerDetails) {
+    const customer = new Customer(customerDetails.name, customerDetails.email, customerDetails.address);
+    return this.cartModule.getCartForCustomer(customer);
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation:
+
+1. **Customer Class**: Encapsulates the customer details and provides a method to generate a unique key.
+2. **CartModule Methods**: Updated to accept a `Customer` object instead of individual customer details.
+3. **API Class**: Simplified by creating a `Customer` object once and passing it to the `CartModule` methods.
+
+This refactoring improves readability and maintainability by reducing the parameter list, encapsulating related data, and removing duplicated code. The external behavior of the code remains the same, and the test file does not need any changes.

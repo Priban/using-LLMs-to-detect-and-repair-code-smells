@@ -1,0 +1,121 @@
+### Step 1: Identify the Code Smell
+
+The code smells identified in the provided code are:
+
+1. **Long Function**: The `addItem` method in the `ShoppingCart` class is doing multiple things: checking if an item exists, updating the quantity, and adding a new item if it doesn't exist.
+2. **Mysterious Name**: The method `ct` in the `ShoppingCart` class has a non-descriptive name.
+3. **Large Class**: The `ShoppingCart` class has multiple responsibilities, including managing items and handling checkout logic.
+4. **Primitive Obsession**: The `item` object is being used directly without a dedicated class to encapsulate its behavior.
+
+### Step 2: Definition of the Code Smells
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Mysterious Name**: A method or variable name that does not clearly describe its purpose or functionality.
+3. **Large Class**: A class that has too many responsibilities, making it difficult to manage and understand.
+4. **Primitive Obsession**: The use of primitive data types to represent complex concepts, leading to scattered logic and lack of encapsulation.
+
+### Step 3: Refactor the Code
+
+#### Refactored Code
+
+```javascript
+class Item {
+    constructor(id, name, price, qty = 1) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.qty = qty;
+    }
+
+    updateQuantity(newQty) {
+        this.qty = newQty;
+    }
+
+    getTotalPrice() {
+        return this.price * this.qty;
+    }
+}
+
+class ShoppingCart {
+    constructor() {
+        this.items = [];
+    }
+
+    findItemById(itemId) {
+        return this.items.find(i => i.id === itemId);
+    }
+
+    addItem(item) {
+        const existingItem = this.findItemById(item.id);
+        if (existingItem) {
+            existingItem.updateQuantity(existingItem.qty + 1);
+        } else {
+            this.items.push(new Item(item.id, item.name, item.price));
+        }
+    }
+
+    removeItem(itemId) {
+        this.items = this.items.filter(i => i.id !== itemId);
+    }
+
+    updateQty(itemId, newQty) {
+        const item = this.findItemById(itemId);
+        if (item && newQty > 0) {
+            item.updateQuantity(newQty);
+        } else {
+            this.removeItem(itemId);
+        }
+    }
+
+    calculateTotal() {
+        return this.items.reduce((total, i) => total + i.getTotalPrice(), 0);
+    }
+
+    checkout() {
+        if (this.items.length === 0) {
+            console.log("Your cart is empty.");
+            return false;
+        }
+        const total = this.calculateTotal();
+        console.log(`The total amount is ${total}. Proceeding to payment.`);
+        return true;
+    }
+}
+
+class API {
+    constructor() {
+        this.cart = new ShoppingCart();
+    }
+
+    addItemToCart(item) {
+        this.cart.addItem(item);
+    }
+
+    removeItemFromCart(itemId) {
+        this.cart.removeItem(itemId);
+    }
+
+    updateItemQuantity(itemId, newQty) {
+        this.cart.updateQty(itemId, newQty);
+    }
+
+    getTotalAmount() {
+        return this.cart.calculateTotal();
+    }
+
+    checkoutCart() {
+        return this.cart.checkout();
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring
+
+1. **Long Function**: The `addItem` method was split into smaller methods: `findItemById` and `updateQuantity` in the `Item` class.
+2. **Mysterious Name**: The method `ct` was renamed to `calculateTotal` to better describe its functionality.
+3. **Large Class**: The `Item` class was introduced to encapsulate item-related behavior, reducing the responsibilities of the `ShoppingCart` class.
+4. **Primitive Obsession**: The `Item` class encapsulates the properties and behavior of an item, reducing the direct use of primitive data types.
+
+The refactored code maintains the same external behavior and structure of the `API` class, ensuring that all tests will still pass without modification.

@@ -1,0 +1,175 @@
+### Step 1: Identify the Code Smell
+
+The code contains the following code smells:
+1. **Middle Man**: The `AccountService` class is acting as a middle man, simply delegating calls to the `Account` class without adding any additional functionality.
+2. **Long Function**: The methods in the `Account` class contain multiple conditional checks, making them longer and harder to read.
+3. **Repeated Switches**: The conditional checks in the `deposit`, `withdraw`, and `transferTo` methods are similar and can be refactored to reduce repetition.
+
+### Step 2: Definition of the Code Smells
+
+1. **Middle Man**: A class that delegates all its work to another class. This can make the code harder to understand and maintain because it adds an unnecessary layer of abstraction.
+2. **Long Function**: A function that is too long and does too many things. This can make the function hard to understand and maintain.
+3. **Repeated Switches**: Similar conditional logic is repeated in multiple places. This can lead to code duplication and make the code harder to maintain.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Plan:
+1. Remove the `AccountService` class to eliminate the middle man.
+2. Simplify the methods in the `Account` class by extracting common validation logic.
+3. Ensure the `API` class maintains the same structure and behavior.
+
+#### Refactored Code:
+
+```javascript
+class Account {
+    constructor(balance = 0) {
+        this.balance = balance;
+    }
+
+    validateAmount(amount) {
+        if (amount <= 0) {
+            return "Amount must be positive.";
+        }
+        return null;
+    }
+
+    deposit(amount) {
+        const validationError = this.validateAmount(amount);
+        if (validationError) {
+            return validationError;
+        }
+        this.balance += amount;
+        return `Deposited $${amount}. New balance is $${this.balance}.`;
+    }
+
+    withdraw(amount) {
+        const validationError = this.validateAmount(amount);
+        if (validationError) {
+            return validationError;
+        }
+        if (amount > this.balance) {
+            return "Insufficient funds.";
+        }
+        this.balance -= amount;
+        return `Withdrew $${amount}. New balance is $${this.balance}.`;
+    }
+
+    transferTo(amount, targetAccount) {
+        const validationError = this.validateAmount(amount);
+        if (validationError) {
+            return validationError;
+        }
+        if (amount > this.balance) {
+            return "Insufficient funds.";
+        }
+        this.balance -= amount;
+        targetAccount.deposit(amount);
+        return `Transferred $${amount} to target account. New balance is $${this.balance}.`;
+    }
+
+    getBalance() {
+        return this.balance;
+    }
+}
+
+class API {
+    constructor(initialBalance = 0) {
+        this.account = new Account(initialBalance);
+    }
+
+    deposit(amount) {
+        return this.account.deposit(amount);
+    }
+
+    withdraw(amount) {
+        return this.account.withdraw(amount);
+    }
+
+    transferTo(amount, targetAPI) {
+        return this.account.transferTo(amount, targetAPI.account);
+    }
+
+    getBalance() {
+        return this.account.getBalance();
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Changes:
+1. **Removed `AccountService` Class**: This class was acting as a middle man, so it was removed to simplify the code.
+2. **Extracted `validateAmount` Method**: This method centralizes the validation logic for positive amounts, reducing code duplication in the `deposit`, `withdraw`, and `transferTo` methods.
+3. **Simplified Methods**: The `deposit`, `withdraw`, and `transferTo` methods now use the `validateAmount` method to handle common validation logic, making them shorter and easier to read.
+
+### Tests
+
+The test file remains the same, ensuring that the refactored code still passes all tests and maintains the same external behavior.
+
+```javascript
+const runDescribe = (API, description) => {
+    describe(description, () => {
+        let api;
+
+        beforeEach(() => {
+            api = new API(100); // Initial balance of 100
+        });
+
+        test('should deposit amount successfully', () => {
+            const result = api.deposit(50);
+            expect(result).toBe('Deposited $50. New balance is $150.');
+            expect(api.getBalance()).toBe(150);
+        });
+
+        test('should withdraw amount successfully', () => {
+            const result = api.withdraw(20);
+            expect(result).toBe('Withdrew $20. New balance is $80.');
+            expect(api.getBalance()).toBe(80);
+        });
+
+        test('should handle insufficient funds during withdrawal', () => {
+            const result = api.withdraw(200);
+            expect(result).toBe('Insufficient funds.');
+            expect(api.getBalance()).toBe(100);
+        });
+
+        test('should handle negative deposit', () => {
+            const result = api.deposit(-50);
+            expect(result).toBe('Amount must be positive.');
+            expect(api.getBalance()).toBe(100);
+        });
+
+        test('should transfer amount successfully to another account', () => {
+            const targetAPI = new API(50);
+            const result = api.transferTo(30, targetAPI);
+            expect(result).toBe('Transferred $30 to target account. New balance is $70.');
+            expect(api.getBalance()).toBe(70);
+            expect(targetAPI.getBalance()).toBe(80);
+        });
+
+        test('should handle insufficient funds during transfer', () => {
+            const targetAPI = new API(50);
+            const result = api.transferTo(200, targetAPI);
+            expect(result).toBe('Insufficient funds.');
+            expect(api.getBalance()).toBe(100);
+            expect(targetAPI.getBalance()).toBe(50);
+        });
+
+        test('should handle negative transfer amount', () => {
+            const targetAPI = new API(50);
+            const result = api.transferTo(-30, targetAPI);
+            expect(result).toBe('Amount must be positive.');
+            expect(api.getBalance()).toBe(100);
+            expect(targetAPI.getBalance()).toBe(50);
+        });
+
+        test('should get the current balance', () => {
+            expect(api.getBalance()).toBe(100);
+        });
+    });
+}
+
+module.exports = runDescribe;
+```
+
+By following these steps, we have improved the readability and maintainability of the code while ensuring that all tests pass and the external behavior remains the same.

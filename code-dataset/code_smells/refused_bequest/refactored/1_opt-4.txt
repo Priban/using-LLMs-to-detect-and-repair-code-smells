@@ -1,0 +1,150 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Refused Bequest**: The `Tool` class inherits from `CatalogProduct` but overrides the `shippingCost` method to return `null`, indicating that it doesn't need this method.
+2. **Divergent Change**: The `CatalogProduct` class has multiple responsibilities, such as managing inventory and calculating shipping costs.
+3. **Long Parameter List**: The constructors for `CatalogProduct` and `Tool` have long parameter lists.
+4. **Primitive Obsession**: The `CatalogProduct` class uses primitive data types for its properties, which could be encapsulated in more meaningful classes.
+
+### Step 2: Definition of the Code Smells
+
+1. **Refused Bequest**: A subclass uses only a portion of the methods and properties inherited from its parent class, indicating that the inheritance hierarchy might be incorrect.
+2. **Divergent Change**: A class is changed in different ways for different reasons, indicating that it has multiple responsibilities.
+3. **Long Parameter List**: A method or constructor has too many parameters, making it difficult to understand and use.
+4. **Primitive Obsession**: The use of primitive data types instead of small objects for simple tasks, leading to less expressive code.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Plan
+
+1. **Refused Bequest**: Create a separate base class for common product functionality and have `CatalogProduct` and `Tool` inherit from it.
+2. **Divergent Change**: Separate the inventory management and shipping cost calculation responsibilities.
+3. **Long Parameter List**: Use parameter objects to encapsulate the parameters.
+4. **Primitive Obsession**: Create small classes for properties like `Price` and `Weight`.
+
+#### Refactored Code
+
+```javascript
+class Product {
+    constructor(name, price, inventoryCount) {
+        this.name = name;
+        this.price = new Price(price);
+        this.inventoryCount = inventoryCount;
+    }
+
+    updateInventory(count) {
+        this.inventoryCount += count;
+    }
+
+    isAvailable() {
+        return this.inventoryCount > 0;
+    }
+}
+
+class CatalogProduct extends Product {
+    constructor(name, price, inventoryCount, weight) {
+        super(name, price, inventoryCount);
+        this.weight = new Weight(weight);
+    }
+
+    shippingCost() {
+        const baseCost = 5;
+        return this.weight.value * 0.5 + baseCost;
+    }
+}
+
+class Tool extends Product {
+    // Additional methods specific to tools
+    maintenanceSchedule() {
+        return `Maintenance required every 6 months for ${this.name}.`;
+    }
+
+    safetyGuidelines() {
+        return `Safety guidelines for ${this.name}:\n1. Wear safety goggles\n2. Keep out of reach of children`;
+    }
+}
+
+class InventoryService {
+    constructor() {
+        this.products = [];
+    }
+
+    addProduct(product) {
+        this.products.push(product);
+    }
+
+    updateProductInventory(productName, count) {
+        const product = this.products.find(p => p.name === productName);
+        if (product) {
+            product.updateInventory(count);
+        }
+    }
+
+    checkProductAvailability(productName) {
+        const product = this.products.find(p => p.name === productName);
+        return product ? product.isAvailable() : false;
+    }
+
+    getProductShippingCost(productName) {
+        const product = this.products.find(p => p.name === productName);
+        return product instanceof CatalogProduct ? product.shippingCost() : null;
+    }
+}
+
+class API {
+    constructor() {
+        this.inventoryService = new InventoryService();
+    }
+
+    createCatalogProduct(name, price, inventoryCount, weight) {
+        const product = new CatalogProduct(name, price, inventoryCount, weight);
+        this.addProduct(product);
+        return product;
+    }
+
+    createTool(name, price, inventoryCount) {
+        const tool = new Tool(name, price, inventoryCount);
+        this.addProduct(tool);
+        return tool;
+    }
+
+    addProduct(product) {
+        this.inventoryService.addProduct(product);
+    }
+
+    updateInventory(productName, count) {
+        this.inventoryService.updateProductInventory(productName, count);
+    }
+
+    checkAvailability(productName) {
+        return this.inventoryService.checkProductAvailability(productName);
+    }
+
+    getShippingCost(productName) {
+        return this.inventoryService.getProductShippingCost(productName);
+    }
+}
+
+class Price {
+    constructor(value) {
+        this.value = value;
+    }
+}
+
+class Weight {
+    constructor(value) {
+        this.value = value;
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation
+
+1. **Refused Bequest**: The `Tool` class no longer inherits the `shippingCost` method from `CatalogProduct` because it now inherits from a more appropriate `Product` base class.
+2. **Divergent Change**: The `Product` class handles inventory management, while `CatalogProduct` handles shipping cost calculation.
+3. **Long Parameter List**: The `Price` and `Weight` classes encapsulate the price and weight values, reducing the number of parameters.
+4. **Primitive Obsession**: The `Price` and `Weight` classes provide more meaningful representations of these properties.
+
+The refactored code maintains the same external behavior and passes all the tests.

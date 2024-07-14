@@ -1,0 +1,120 @@
+To improve the readability and maintainability of the code, we can refactor it by breaking down the responsibilities more clearly and using more descriptive method names. Here is the refactored code:
+
+### Refactored Code:
+```javascript
+class PriceCalculator {
+    calculateTotalPriceWithTax(price, taxRate) {
+        return price * (1 + taxRate);
+    }
+}
+
+class ShoppingCart {
+    constructor(taxRate = 0.2) {
+        this.items = [];
+        this.taxRate = taxRate;
+        this.priceCalculator = new PriceCalculator();
+    }
+
+    addItem(name, price) {
+        this.items.push({ name, price });
+    }
+
+    calculateTotal() {
+        return this.items.reduce((total, item) => {
+            return total + this.priceCalculator.calculateTotalPriceWithTax(item.price, this.taxRate);
+        }, 0);
+    }
+
+    getTotalPriceWithTax() {
+        return this.calculateTotal();
+    }
+
+    printTotalPrice() {
+        const totalPrice = this.getTotalPriceWithTax();
+        console.log(`Total price with tax: $${totalPrice.toFixed(2)}`);
+    }
+}
+
+class API {
+    constructor() {
+        this.shoppingCart = new ShoppingCart();
+    }
+
+    addItemToCart(name, price) {
+        this.shoppingCart.addItem(name, price);
+    }
+
+    getTotalPrice() {
+        return this.shoppingCart.getTotalPriceWithTax();
+    }
+
+    printCartTotal() {
+        this.shoppingCart.printTotalPrice();
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Changes:
+1. **Constructor Parameter for Tax Rate**: The `ShoppingCart` constructor now accepts a `taxRate` parameter with a default value of `0.2`. This makes the class more flexible and easier to test with different tax rates.
+2. **Method Renaming**: 
+   - `calculateTotal` is now a private method (not explicitly marked as private in JavaScript, but intended for internal use).
+   - `calculateTotal` is used internally by `getTotalPriceWithTax` to make the purpose of each method clearer.
+   - `printTotal` is renamed to `printTotalPrice` to be more descriptive.
+3. **Descriptive Method Names**: The method names are now more descriptive, making the code easier to understand.
+
+### Tests:
+The test file remains the same, ensuring that the refactored code still passes all tests and the external behavior remains unchanged.
+
+```javascript
+const runDescribe = (API, description) => {
+  describe(description, () => {
+    let api;
+
+    beforeEach(() => {
+      api = new API();
+    });
+
+    test('should add item to cart and calculate total price with tax', () => {
+      api.addItemToCart('Laptop', 1000);
+      api.addItemToCart('Phone', 500);
+
+      const totalPrice = api.getTotalPrice();
+
+      expect(totalPrice).toBeCloseTo(1800); // 1000 * 1.2 + 500 * 1.2 = 1200 + 600 = 1800
+    });
+
+    test('should print total price correctly', () => {
+      console.log = jest.fn();
+
+      api.addItemToCart('Laptop', 1000);
+      api.addItemToCart('Phone', 500);
+
+      api.printCartTotal();
+
+      expect(console.log).toHaveBeenCalledWith('Total price with tax: $1800.00');
+    });
+
+    test('should handle empty cart', () => {
+      const totalPrice = api.getTotalPrice();
+
+      expect(totalPrice).toBe(0);
+    });
+
+    test('should add multiple items and calculate total price', () => {
+      api.addItemToCart('Laptop', 1000);
+      api.addItemToCart('Phone', 500);
+      api.addItemToCart('Headphones', 200);
+
+      const totalPrice = api.getTotalPrice();
+
+      expect(totalPrice).toBeCloseTo(2040); // 1000 * 1.2 + 500 * 1.2 + 200 * 1.2 = 1200 + 600 + 240 = 2040
+    });
+  });
+}
+
+module.exports = runDescribe;
+```
+
+By refactoring the code in this manner, we improve its readability and maintainability while ensuring that the external behavior remains consistent and all tests pass successfully.

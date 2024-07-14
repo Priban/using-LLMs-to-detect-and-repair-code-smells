@@ -1,0 +1,101 @@
+### Step 1: Identify the Code Smell in the Code
+
+The code contains several code smells:
+1. **Global Data**: The variables `currentUser`, `balance`, and `transactionHistory` are global, which can lead to issues with data integrity and concurrency.
+2. **Long Function**: The `printTransactionHistory` function is doing too much by handling both the user information and the transaction details.
+3. **Large Class**: The `API` class is acting as a middleman, simply forwarding calls to the global functions.
+4. **Feature Envy**: The global functions are manipulating the state of the `currentUser`, `balance`, and `transactionHistory` directly.
+
+### Step 2: Definition of the Code Smell
+
+1. **Global Data**: Using global variables can lead to code that is difficult to understand and maintain. It can also cause issues with data integrity and concurrency.
+2. **Long Function**: A function that does too much can be difficult to understand and maintain.
+3. **Large Class**: A class that has too many responsibilities or methods can be difficult to understand and maintain.
+4. **Feature Envy**: A function that seems more interested in the data of another object than in its own data.
+
+### Step 3: Refactor the Code
+
+To address these code smells, we can encapsulate the state and behavior within a class, reducing the reliance on global variables and making the code more modular and maintainable.
+
+Refactored Code:
+```javascript
+class UserAccount {
+    constructor() {
+        this.currentUser = null;
+        this.balance = 0;
+        this.transactionHistory = [];
+    }
+
+    loginUser(username) {
+        this.currentUser = username;
+        console.log("User logged in:", this.currentUser);
+    }
+
+    deposit(amount) {
+        if (amount > 0) {
+            this.balance += amount;
+            this.transactionHistory.push({ type: "deposit", amount: amount });
+            console.log("Deposited:", amount, "New Balance:", this.balance);
+        } else {
+            console.log("Invalid deposit amount");
+        }
+    }
+
+    withdraw(amount) {
+        if (amount > 0 && amount <= this.balance) {
+            this.balance -= amount;
+            this.transactionHistory.push({ type: "withdraw", amount: amount });
+            console.log("Withdrew:", amount, "New Balance:", this.balance);
+        } else {
+            console.log("Invalid withdraw amount or insufficient balance");
+        }
+    }
+
+    checkBalance() {
+        console.log("Current Balance:", this.balance);
+    }
+
+    printTransactionHistory() {
+        console.log("Transaction History for", this.currentUser);
+        this.transactionHistory.forEach(transaction => {
+            console.log(transaction.type, transaction.amount);
+        });
+    }
+}
+
+class API {
+    constructor() {
+        this.userAccount = new UserAccount();
+    }
+
+    loginUser(username) {
+        this.userAccount.loginUser(username);
+    }
+
+    deposit(amount) {
+        this.userAccount.deposit(amount);
+    }
+
+    withdraw(amount) {
+        this.userAccount.withdraw(amount);
+    }
+
+    checkBalance() {
+        this.userAccount.checkBalance();
+    }
+
+    printTransactionHistory() {
+        this.userAccount.printTransactionHistory();
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation
+
+1. **Encapsulation**: The `UserAccount` class encapsulates the state (`currentUser`, `balance`, `transactionHistory`) and behavior (methods) related to a user's account.
+2. **Modularity**: The `API` class now holds an instance of `UserAccount` and delegates method calls to it, improving modularity and separation of concerns.
+3. **Readability and Maintainability**: The code is now more readable and maintainable, with clear boundaries between different responsibilities.
+
+The test file remains the same, ensuring that the external behavior of the code remains unchanged.

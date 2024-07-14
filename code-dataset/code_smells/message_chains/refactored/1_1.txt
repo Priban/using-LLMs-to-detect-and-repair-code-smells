@@ -1,0 +1,125 @@
+### Step 1: Identify the Code Smell in the Code
+
+The code contains several code smells:
+1. **Data Clumps**: The `Product` class has deeply nested structures for storing product information.
+2. **Long Function**: The `addProductToCart` method in the `API` class is doing too much by creating a product and adding it to the cart.
+3. **Feature Envy**: The `CartItem` class is accessing deeply nested properties of the `Product` class.
+4. **Mysterious Name**: The `productInfo` property in the `Product` class is not very descriptive.
+
+### Step 2: Write Down the Definition of the Code Smell You Identified
+
+1. **Data Clumps**: Groups of data that tend to be passed around together. These can often be replaced with a single object.
+2. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+3. **Feature Envy**: A method that seems more interested in a class other than the one it actually is in.
+4. **Mysterious Name**: A name that does not clearly reveal the intent of the variable, method, or class.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Steps:
+
+1. **Simplify the `Product` class**: Flatten the structure and give meaningful names.
+2. **Simplify the `CartItem` class**: Access properties directly.
+3. **Simplify the `API` class**: Separate the creation of a product from adding it to the cart.
+
+Here is the refactored code:
+
+```javascript
+class Product {
+    constructor(id, name, price, discount) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.discount = discount;
+    }
+
+    get discountedPrice() {
+        return this.price - this.price * this.discount;
+    }
+}
+
+class CartItem {
+    constructor(product, quantity) {
+        this.product = product;
+        this.quantity = quantity;
+    }
+
+    get totalPrice() {
+        return this.product.discountedPrice * this.quantity;
+    }
+}
+
+class ShoppingCart {
+    constructor() {
+        this.items = [];
+    }
+
+    addProduct(product, quantity) {
+        const existingItem = this.items.find(item => item.product.id === product.id);
+        if (existingItem) {
+            existingItem.quantity += quantity;
+        } else {
+            this.items.push(new CartItem(product, quantity));
+        }
+    }
+
+    removeProduct(productId) {
+        const index = this.items.findIndex(item => item.product.id === productId);
+        if (index > -1) {
+            this.items.splice(index, 1);
+        }
+    }
+
+    updateQuantity(productId, quantity) {
+        const item = this.items.find(item => item.product.id === productId);
+        if (item) {
+            item.quantity = quantity;
+        }
+    }
+
+    get totalCost() {
+        return this.items.reduce((total, item) => total + item.totalPrice, 0);
+    }
+}
+
+class API {
+    constructor() {
+        this.shoppingCart = new ShoppingCart();
+    }
+
+    addProductToCart(id, name, price, discount, quantity) {
+        const product = new Product(id, name, price, discount);
+        this.shoppingCart.addProduct(product, quantity);
+    }
+
+    removeProductFromCart(productId) {
+        this.shoppingCart.removeProduct(productId);
+    }
+
+    updateProductQuantity(productId, quantity) {
+        this.shoppingCart.updateQuantity(productId, quantity);
+    }
+
+    getTotalCost() {
+        return this.shoppingCart.totalCost;
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Changes:
+
+1. **Product Class**:
+   - Flattened the structure by removing nested objects.
+   - Added a `discountedPrice` getter to encapsulate the discount calculation.
+
+2. **CartItem Class**:
+   - Accessed the `discountedPrice` directly from the `Product` class.
+
+3. **ShoppingCart Class**:
+   - No major changes, but it benefits from the simplified `Product` and `CartItem` classes.
+
+4. **API Class**:
+   - No major changes, but it benefits from the simplified `Product` class.
+
+The refactored code maintains the same external behavior and passes all the tests.

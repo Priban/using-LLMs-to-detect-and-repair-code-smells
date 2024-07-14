@@ -1,0 +1,127 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Long Function**: The methods in the `API` class are doing multiple things, making them longer than necessary.
+2. **Feature Envy**: The `API` class methods are accessing the `Bank` and `TransactionLogger` classes' methods directly, indicating that some responsibilities might be misplaced.
+3. **Message Chains**: The `API` class methods are calling methods on objects returned by other methods, creating a chain of method calls.
+4. **Duplicated Code**: The `API` class has repeated code for finding accounts and logging transactions.
+
+### Step 2: Definition of the Code Smells
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Feature Envy**: A method that seems more interested in the data of another class than that of the class it is in.
+3. **Message Chains**: A series of calls to different methods, often leading to tightly coupled code.
+4. **Duplicated Code**: Code that is repeated in multiple places, making it harder to maintain.
+
+### Step 3: Refactor the Code
+
+#### Refactored Code
+
+```javascript
+class Account {
+  constructor(owner, balance = 0) {
+      this.owner = owner;
+      this.balance = balance;
+  }
+
+  deposit(amount) {
+      if (amount > 0) {
+          this.balance += amount;
+      } else {
+          console.log('Deposit amount must be positive.');
+      }
+  }
+
+  withdraw(amount) {
+      if (amount > 0 && amount <= this.balance) {
+          this.balance -= amount;
+      } else {
+          console.log('Withdrawal amount must be positive and within the available balance.');
+      }
+  }
+
+  getBalance() {
+      return this.balance;
+  }
+}
+
+class Bank {
+  constructor() {
+      this.accounts = [];
+  }
+
+  addAccount(account) {
+      this.accounts.push(account);
+  }
+
+  findAccount(owner) {
+      return this.accounts.find(account => account.owner === owner);
+  }
+
+  performTransaction(owner, amount, transactionType) {
+      const account = this.findAccount(owner);
+      if (account) {
+          if (transactionType === 'deposit') {
+              account.deposit(amount);
+          } else if (transactionType === 'withdraw') {
+              account.withdraw(amount);
+          }
+          return true;
+      } else {
+          console.log('Account not found.');
+          return false;
+      }
+  }
+}
+
+class TransactionLogger {
+  log(transaction) {
+      console.log(`Transaction: ${transaction}`);
+  }
+}
+
+class API {
+  constructor() {
+      this.bank = new Bank();
+      this.logger = new TransactionLogger();
+  }
+
+  createAccount(owner, initialBalance = 0) {
+      const account = new Account(owner, initialBalance);
+      this.bank.addAccount(account);
+      this.logger.log(`Created account for ${owner} with balance ${initialBalance}`);
+  }
+
+  deposit(owner, amount) {
+      if (this.bank.performTransaction(owner, amount, 'deposit')) {
+          this.logger.log(`Deposited ${amount} to ${owner}'s account`);
+      }
+  }
+
+  withdraw(owner, amount) {
+      if (this.bank.performTransaction(owner, amount, 'withdraw')) {
+          this.logger.log(`Withdrew ${amount} from ${owner}'s account`);
+      }
+  }
+
+  getBalance(owner) {
+      const account = this.bank.findAccount(owner);
+      if (account) {
+          return account.getBalance();
+      } else {
+          console.log('Account not found.');
+          return null;
+      }
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring
+
+1. **Extracted Method**: Moved the common logic for finding an account and performing a transaction into a new method `performTransaction` in the `Bank` class. This reduces the length of the methods in the `API` class and removes duplicated code.
+2. **Reduced Message Chains**: By moving the transaction logic into the `Bank` class, we reduced the message chains in the `API` class.
+3. **Improved Readability**: The `API` class methods are now shorter and more focused, improving readability and maintainability.
+
+The refactored code maintains the same external behavior and should pass all the existing tests.

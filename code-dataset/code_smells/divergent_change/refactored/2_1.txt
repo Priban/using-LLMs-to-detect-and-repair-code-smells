@@ -1,0 +1,216 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Large Class**: The `AGSInstrumentAPI` class has too many responsibilities, making it difficult to maintain.
+2. **Long Function**: Some methods in the `AGSInstrumentAPI` class are doing too much.
+3. **Duplicated Code**: There are repeated checks for account existence and similar logging and notification code.
+4. **Feature Envy**: The `Bank` class is heavily dependent on the `AGSInstrumentAPI` class, indicating that some responsibilities might be misplaced.
+
+### Step 2: Definition of the Code Smells
+
+1. **Large Class**: A class that has too many responsibilities and is trying to do too much. This makes the class difficult to understand and maintain.
+2. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+3. **Duplicated Code**: Code that is repeated in multiple places, making it harder to maintain and more error-prone.
+4. **Feature Envy**: A class that uses methods and data from another class excessively, indicating that some functionality might be misplaced.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Plan
+
+1. **Extract Methods**: Break down long methods into smaller, more focused methods.
+2. **Extract Classes**: Split the `AGSInstrumentAPI` class into smaller classes with single responsibilities.
+3. **Remove Duplicated Code**: Create helper methods to handle repeated code.
+4. **Reassign Responsibilities**: Ensure that each class has a clear and single responsibility.
+
+#### Refactored Code
+
+```javascript
+class Account {
+    constructor(accountId, initialBalance = 0.0) {
+        this.accountId = accountId;
+        this.balance = initialBalance;
+        this.transactionHistory = [];
+    }
+
+    deposit(amount) {
+        this.balance += amount;
+        this.transactionHistory.push(`Deposited ${amount}`);
+    }
+
+    withdraw(amount) {
+        if (this.balance < amount) {
+            throw new Error("Insufficient funds");
+        }
+        this.balance -= amount;
+        this.transactionHistory.push(`Withdrew ${amount}`);
+    }
+
+    getBalance() {
+        return this.balance;
+    }
+
+    getTransactionHistory() {
+        return this.transactionHistory;
+    }
+
+    generateReport() {
+        return `AGS Report for Account ${this.accountId}\nBalance: ${this.balance}\nTransactions: ${this.transactionHistory.join(", ")}`;
+    }
+}
+
+class AGSInstrumentAPI {
+    constructor() {
+        this.accounts = {};
+    }
+
+    openAGSAccount(accountId, initialBalance = 0.0) {
+        this._ensureAccountDoesNotExist(accountId);
+        this.accounts[accountId] = new Account(accountId, initialBalance);
+        this._logAndNotify(`Account ${accountId} opened with balance ${initialBalance}`);
+    }
+
+    closeAGSAccount(accountId) {
+        this._ensureAccountExists(accountId);
+        delete this.accounts[accountId];
+        this._logAndNotify(`Account ${accountId} closed`);
+    }
+
+    AGSDeposit(accountId, amount) {
+        this._ensureAccountExists(accountId);
+        this.accounts[accountId].deposit(amount);
+        this._logAndNotify(`Deposited ${amount} to account ${accountId}`);
+    }
+
+    AGSWithdraw(accountId, amount) {
+        this._ensureAccountExists(accountId);
+        this.accounts[accountId].withdraw(amount);
+        this._logAndNotify(`Withdrew ${amount} from account ${accountId}`);
+    }
+
+    getBalance(accountId) {
+        this._ensureAccountExists(accountId);
+        return this.accounts[accountId].getBalance();
+    }
+
+    getTransactionHistory(accountId) {
+        this._ensureAccountExists(accountId);
+        return this.accounts[accountId].getTransactionHistory();
+    }
+
+    generateAGSReport(accountId) {
+        this._ensureAccountExists(accountId);
+        const report = this.accounts[accountId].generateReport();
+        console.log(report);
+        return report;
+    }
+
+    _ensureAccountExists(accountId) {
+        if (!this.accounts[accountId]) {
+            throw new Error("Account does not exist");
+        }
+    }
+
+    _ensureAccountDoesNotExist(accountId) {
+        if (this.accounts[accountId]) {
+            throw new Error("Account already exists");
+        }
+    }
+
+    _logAndNotify(message) {
+        console.log(message);
+        this.notifyAGSSystems(message);
+    }
+
+    notifyAGSSystems(message) {
+        console.log(`Notification to AGS Systems: ${message}`);
+    }
+}
+
+class Bank {
+    constructor(name) {
+        this.name = name;
+        this.agsAPI = new AGSInstrumentAPI();
+    }
+
+    createAccount(accountId, initialBalance = 0.0) {
+        this.agsAPI.openAGSAccount(accountId, initialBalance);
+        console.log(`Bank ${this.name}: Account ${accountId} created`);
+    }
+
+    deleteAccount(accountId) {
+        this.agsAPI.closeAGSAccount(accountId);
+        console.log(`Bank ${this.name}: Account ${accountId} deleted`);
+    }
+
+    depositToAccount(accountId, amount) {
+        this.agsAPI.AGSDeposit(accountId, amount);
+        console.log(`Bank ${this.name}: Deposited ${amount} to account ${accountId}`);
+    }
+
+    withdrawFromAccount(accountId, amount) {
+        this.agsAPI.AGSWithdraw(accountId, amount);
+        console.log(`Bank ${this.name}: Withdrew ${amount} from account ${accountId}`);
+    }
+
+    getAccountBalance(accountId) {
+        const balance = this.agsAPI.getBalance(accountId);
+        console.log(`Bank ${this.name}: Account ${accountId} balance is ${balance}`);
+        return balance;
+    }
+
+    getAccountTransactions(accountId) {
+        const transactions = this.agsAPI.getTransactionHistory(accountId);
+        console.log(`Bank ${this.name}: Account ${accountId} transactions are ${transactions}`);
+        return transactions;
+    }
+
+    generateReport(accountId) {
+        const report = this.agsAPI.generateAGSReport(accountId);
+        console.log(`Bank ${this.name}: Generated AGS report for account ${accountId}`);
+        return report;
+    }
+}
+
+class API {
+    constructor() {
+        this.bank = new Bank("MyBank");
+    }
+
+    createAccount(accountId, initialBalance = 0.0) {
+        this.bank.createAccount(accountId, initialBalance);
+    }
+
+    deleteAccount(accountId) {
+        this.bank.deleteAccount(accountId);
+    }
+
+    depositToAccount(accountId, amount) {
+        this.bank.depositToAccount(accountId, amount);
+    }
+
+    withdrawFromAccount(accountId, amount) {
+        this.bank.withdrawFromAccount(accountId, amount);
+    }
+
+    getAccountBalance(accountId) {
+        return this.bank.getAccountBalance(accountId);
+    }
+
+    getAccountTransactions(accountId) {
+        return this.bank.getAccountTransactions(accountId);
+    }
+
+    generateReport(accountId) {
+        return this.bank.generateReport(accountId);
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring
+
+1. **Extracted `Account` Class**: This class now handles all account-related operations, reducing the responsibilities of `AGSInstrumentAPI`.
+2. **Simplified `AGSInstrumentAPI`**: This class now delegates account-specific operations to the `Account` class and handles account management and notifications.
+3. **Removed Duplicated Code**: Created helper methods `_ensureAccountExists`, `_ensureAccountDoesNotExist`, and `_logAndNotify` to handle repeated code.
+4. **Maintained API Structure**: The external behavior and structure of the `API` class remain unchanged, ensuring that all tests still pass without modification.

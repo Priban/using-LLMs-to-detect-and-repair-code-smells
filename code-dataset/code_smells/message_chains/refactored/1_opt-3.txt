@@ -1,0 +1,111 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Data Clumps**: The `Product` class has nested structures that make accessing data cumbersome.
+2. **Long Function**: The `addProductToCart` method in the `API` class is doing too much by creating a product and adding it to the cart.
+3. **Message Chains**: The `totalPrice` getter in the `CartItem` class has a long chain of method calls to access the price and discount.
+4. **Primitive Obsession**: The `Product` class uses primitive types for `id`, `name`, `price`, and `discount` without encapsulating them in meaningful classes.
+
+### Step 2: Definition of the Code Smells
+
+1. **Data Clumps**: Groups of data that tend to be passed around together. They should be encapsulated in their own class.
+2. **Long Function**: Functions that are too long and do too much. They should be broken down into smaller, more focused functions.
+3. **Message Chains**: A series of calls to get to a piece of data. This can be simplified by providing direct access methods.
+4. **Primitive Obsession**: Using primitive data types instead of small objects for simple tasks. This can lead to code that is harder to understand and maintain.
+
+### Step 3: Refactor the Code
+
+#### Refactored Code
+
+```javascript
+class Product {
+    constructor(id, name, price, discount) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.discount = discount;
+    }
+
+    get discountedPrice() {
+        return this.price - this.price * this.discount;
+    }
+}
+
+class CartItem {
+    constructor(product, quantity) {
+        this.product = product;
+        this.quantity = quantity;
+    }
+
+    get totalPrice() {
+        return this.product.discountedPrice * this.quantity;
+    }
+}
+
+class ShoppingCart {
+    constructor() {
+        this.items = [];
+    }
+
+    addProduct(product, quantity) {
+        const existingItem = this.items.find(item => item.product.id === product.id);
+        if (existingItem) {
+            existingItem.quantity += quantity;
+        } else {
+            this.items.push(new CartItem(product, quantity));
+        }
+    }
+
+    removeProduct(productId) {
+        const index = this.items.findIndex(item => item.product.id === productId);
+        if (index > -1) {
+            this.items.splice(index, 1);
+        }
+    }
+
+    updateQuantity(productId, quantity) {
+        const item = this.items.find(item => item.product.id === productId);
+        if (item) {
+            item.quantity = quantity;
+        }
+    }
+
+    get totalCost() {
+        return this.items.reduce((total, item) => total + item.totalPrice, 0);
+    }
+}
+
+class API {
+    constructor() {
+        this.shoppingCart = new ShoppingCart();
+    }
+
+    addProductToCart(id, name, price, discount, quantity) {
+        const product = new Product(id, name, price, discount);
+        this.shoppingCart.addProduct(product, quantity);
+    }
+
+    removeProductFromCart(productId) {
+        this.shoppingCart.removeProduct(productId);
+    }
+
+    updateProductQuantity(productId, quantity) {
+        this.shoppingCart.updateQuantity(productId, quantity);
+    }
+
+    getTotalCost() {
+        return this.shoppingCart.totalCost;
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring
+
+1. **Data Clumps**: The nested structure in the `Product` class was flattened. Now, `Product` directly holds `id`, `name`, `price`, and `discount`.
+2. **Long Function**: The `addProductToCart` method in the `API` class remains the same length, but the creation of the `Product` object is now more straightforward due to the simplified `Product` class.
+3. **Message Chains**: The `totalPrice` getter in the `CartItem` class now directly accesses `product.discountedPrice`, reducing the chain of method calls.
+4. **Primitive Obsession**: The `Product` class now encapsulates the logic for calculating the discounted price, making the code more object-oriented and easier to maintain.
+
+The refactored code should still pass all the tests, as the external behavior remains the same.

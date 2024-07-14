@@ -1,0 +1,144 @@
+### Step 1: Identify the Code Smell
+
+The code contains the following code smells:
+1. **Duplicated Code**: The `logAction` method is duplicated across multiple classes.
+2. **Long Function**: The `API` class constructor is doing too much by initializing multiple properties.
+3. **Large Class**: The `API` class has too many responsibilities, including managing inventory, orders, and customers.
+
+### Step 2: Definition of the Code Smell
+
+1. **Duplicated Code**: This occurs when the same code structure is repeated in multiple places. It makes the code harder to maintain because any change needs to be made in multiple places.
+2. **Long Function**: A function that is too long and does too many things. It can be hard to understand and maintain.
+3. **Large Class**: A class that has too many responsibilities. It can be hard to understand, maintain, and test.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Plan
+
+1. **Extract the `logAction` method** into a separate utility class to remove duplication.
+2. **Simplify the `API` class constructor** by moving the initialization logic to separate methods.
+3. **Split the `API` class** into smaller classes to adhere to the Single Responsibility Principle.
+
+#### Refactored Code
+
+```javascript
+class Logger {
+    static logAction(context, action) {
+        console.log(`${context}: ${action}`);
+    }
+}
+
+class Product {
+    constructor(name, price) {
+        this.name = name;
+        this.price = price;
+    }
+
+    updatePrice(newPrice) {
+        this.price = newPrice;
+        Logger.logAction(this.name, 'Price updated');
+    }
+}
+
+class Order {
+    constructor(orderId, product) {
+        this.orderId = orderId;
+        this.product = product;
+    }
+
+    addProduct(product) {
+        this.product = product;
+        Logger.logAction(`Order ${this.orderId}`, 'Product added');
+    }
+}
+
+class Customer {
+    constructor(name, email) {
+        this.name = name;
+        this.email = email;
+    }
+
+    updateEmail(newEmail) {
+        this.email = newEmail;
+        Logger.logAction(this.name, 'Email updated');
+    }
+}
+
+class Inventory {
+    constructor() {
+        this.products = [];
+    }
+
+    addProduct(product) {
+        this.products.push(product);
+        Logger.logAction('Inventory', 'Product added to inventory');
+    }
+}
+
+class API {
+    constructor() {
+        this.initializeInventory();
+        this.initializeOrders();
+        this.initializeCustomers();
+    }
+
+    initializeInventory() {
+        this.inventory = new Inventory();
+    }
+
+    initializeOrders() {
+        this.orders = [];
+    }
+
+    initializeCustomers() {
+        this.customers = [];
+    }
+
+    addProductToInventory(name, price) {
+        const product = new Product(name, price);
+        this.inventory.addProduct(product);
+        return product;
+    }
+
+    createOrder(orderId, productName, productPrice) {
+        const product = new Product(productName, productPrice);
+        const order = new Order(orderId, product);
+        this.orders.push(order);
+        return order;
+    }
+
+    addCustomer(name, email) {
+        const customer = new Customer(name, email);
+        this.customers.push(customer);
+        return customer;
+    }
+
+    updateCustomerEmail(name, newEmail) {
+        const customer = this.customers.find(c => c.name === name);
+        if (customer) {
+            customer.updateEmail(newEmail);
+            return true;
+        }
+        return false;
+    }
+
+    updateProductPrice(productName, newPrice) {
+        const product = this.inventory.products.find(p => p.name === productName);
+        if (product) {
+            product.updatePrice(newPrice);
+            return true;
+        }
+        return false;
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Changes
+
+1. **Logger Class**: Created a `Logger` class with a static method `logAction` to handle logging. This removes the duplicated `logAction` method from the `Product`, `Order`, `Customer`, and `Inventory` classes.
+2. **API Class Initialization**: Split the initialization logic of the `API` class into three separate methods: `initializeInventory`, `initializeOrders`, and `initializeCustomers`. This makes the constructor shorter and more readable.
+3. **Single Responsibility Principle**: The `API` class is still responsible for managing inventory, orders, and customers, but the initialization logic is now more modular.
+
+The refactored code maintains the same external behavior and should pass all the existing tests.

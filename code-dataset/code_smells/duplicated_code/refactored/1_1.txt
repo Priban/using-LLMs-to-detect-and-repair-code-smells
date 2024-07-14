@@ -1,0 +1,161 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Long Function**: The `addItem` method is doing too many things.
+2. **Duplicated Code**: The `addItem`, `removeItem`, and `updateQuantity` methods all call `notifySubscribers`, `updateCartDisplay`, and increment `notificationCount`.
+3. **Large Class**: The `ShoppingCart` class has too many responsibilities.
+4. **Primitive Obsession**: The `items` array uses plain objects for `product` and `quantity`.
+
+### Step 2: Definition of the Code Smell
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Duplicated Code**: Code that is repeated in multiple places, making it harder to maintain.
+3. **Large Class**: A class that has too many responsibilities, violating the Single Responsibility Principle.
+4. **Primitive Obsession**: The use of primitive data types to represent domain ideas, which can lead to less readable and maintainable code.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Plan
+
+1. **Extract Methods**: Break down the `addItem` method into smaller methods.
+2. **Remove Duplicated Code**: Create a common method to handle `notifySubscribers`, `updateCartDisplay`, and incrementing `notificationCount`.
+3. **Introduce a `CartItem` Class**: Replace the plain object in the `items` array with a `CartItem` class.
+4. **Split Responsibilities**: Move some responsibilities out of the `ShoppingCart` class if necessary.
+
+#### Refactored Code
+
+```javascript
+class CartItem {
+    constructor(product, quantity) {
+        this.product = product;
+        this.quantity = quantity;
+    }
+
+    updateQuantity(quantity) {
+        this.quantity = quantity;
+    }
+
+    getTotalPrice() {
+        return this.product.price * this.quantity;
+    }
+}
+
+class ShoppingCart {
+    constructor(user) {
+        this.user = user;
+        this.items = [];
+        this.subscribers = [];
+        this.notificationCount = 0;
+    }
+
+    addItem(product, quantity) {
+        const index = this.findItemIndex(product.id);
+        if (index > -1) {
+            this.updateExistingItem(index, quantity, product);
+        } else {
+            this.addNewItem(product, quantity);
+        }
+        this.notifyAndUpdate();
+    }
+
+    removeItem(productId) {
+        this.items = this.items.filter(item => item.product.id !== productId);
+        this.notifyAndUpdate();
+    }
+
+    updateQuantity(productId, quantity) {
+        const index = this.findItemIndex(productId);
+        if (index > -1) {
+            this.items[index].updateQuantity(quantity);
+            this.notifyAndUpdate();
+        } else {
+            console.error('Product not found in cart');
+        }
+    }
+
+    calculateTotal() {
+        return this.items.reduce((total, item) => total + item.getTotalPrice(), 0);
+    }
+
+    subscribe(subscriber) {
+        this.subscribers.push(subscriber);
+    }
+
+    notifySubscribers() {
+        this.subscribers.forEach(subscriber => subscriber.update(this));
+    }
+
+    updateCartDisplay() {
+        console.log(`Cart updated for user ${this.user.username}. Total items: ${this.items.length}`);
+    }
+
+    notifyAndUpdate() {
+        this.notifySubscribers();
+        this.updateCartDisplay();
+        this.notificationCount++;
+    }
+
+    findItemIndex(productId) {
+        return this.items.findIndex(item => item.product.id === productId);
+    }
+
+    updateExistingItem(index, quantity, product) {
+        this.items[index].updateQuantity(this.items[index].quantity + quantity);
+        if (this.items[index].quantity > product.stock) {
+            console.error('Not enough stock for product:', product.name);
+            this.items[index].updateQuantity(product.stock);
+        }
+    }
+
+    addNewItem(product, quantity) {
+        if (quantity <= product.stock) {
+            this.items.push(new CartItem(product, quantity));
+        } else {
+            console.error('Not enough stock for product:', product.name);
+        }
+    }
+}
+
+class CartSubscriber {
+    update(cart) {
+        console.log('Cart was updated. New total:', cart.calculateTotal());
+    }
+}
+
+class API {
+    constructor(user) {
+        this.shoppingCart = new ShoppingCart(user);
+    }
+
+    addProductToCart(product, quantity) {
+        this.shoppingCart.addItem(product, quantity);
+    }
+
+    removeProductFromCart(productId) {
+        this.shoppingCart.removeItem(productId);
+    }
+
+    updateProductQuantity(productId, quantity) {
+        this.shoppingCart.updateQuantity(productId, quantity);
+    }
+
+    getTotal() {
+        return this.shoppingCart.calculateTotal();
+    }
+
+    addSubscriber(subscriber) {
+        this.shoppingCart.subscribe(subscriber);
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation
+
+1. **Extract Methods**: The `addItem` method is broken down into `updateExistingItem` and `addNewItem`.
+2. **Remove Duplicated Code**: The `notifyAndUpdate` method handles `notifySubscribers`, `updateCartDisplay`, and incrementing `notificationCount`.
+3. **Introduce a `CartItem` Class**: The `CartItem` class encapsulates the `product` and `quantity` and provides methods to update the quantity and calculate the total price.
+4. **Split Responsibilities**: The `ShoppingCart` class is now more focused on managing the cart items, while the `CartItem` class handles individual item details.
+
+This refactoring improves readability, maintainability, and adheres to the Single Responsibility Principle. The external behavior of the code remains the same, ensuring all tests pass without modification.

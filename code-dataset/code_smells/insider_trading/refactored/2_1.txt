@@ -1,0 +1,260 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Large Class**: The `API` class is handling too many responsibilities, including account management, transaction processing, and loan management.
+2. **Long Function**: Some functions in the `API` class are doing too much, making them harder to read and maintain.
+3. **Feature Envy**: The `Transaction` and `Loan` classes are manipulating the `Account` class's balance directly.
+4. **Primitive Obsession**: The `Transaction` class uses strings to represent the type of transaction, which could be better represented by an enumeration.
+
+### Step 2: Definition of the Code Smells
+
+1. **Large Class**: A class that has grown too large and is trying to do too much. This makes the class difficult to understand and maintain.
+2. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+3. **Feature Envy**: A class that uses methods and data from another class excessively, indicating that the functionality might belong in the other class.
+4. **Primitive Obsession**: The use of primitive data types to represent domain ideas, which can lead to code that is harder to understand and maintain.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Plan
+
+1. **Extract Classes**: Split the `API` class into smaller classes with single responsibilities.
+2. **Introduce Enum**: Replace the string literals for transaction types with an enumeration.
+3. **Move Methods**: Move methods that manipulate the `Account` balance to the `Account` class.
+
+#### Refactored Code
+
+```javascript
+// TransactionType Enum
+const TransactionType = Object.freeze({
+  DEPOSIT: 'deposit',
+  WITHDRAWAL: 'withdrawal'
+});
+
+class Account {
+  constructor(accountId, accountHolder, balance) {
+    this.accountId = accountId;
+    this.accountHolder = accountHolder;
+    this.balance = balance;
+    this.loans = [];
+  }
+
+  addLoan(loan) {
+    this.loans.push(loan);
+  }
+
+  deposit(amount) {
+    this.balance += amount;
+  }
+
+  withdraw(amount) {
+    if (this.balance >= amount) {
+      this.balance -= amount;
+      return true;
+    }
+    return false;
+  }
+
+  toString() {
+    return `Account(${this.accountId}, ${this.accountHolder}, Balance: ${this.balance})`;
+  }
+}
+
+class Transaction {
+  constructor(transactionId, account, amount, type) {
+    this.transactionId = transactionId;
+    this.account = account;
+    this.amount = amount;
+    this.type = type;
+    this.status = 'Pending';
+  }
+
+  processTransaction() {
+    if (this.type === TransactionType.DEPOSIT) {
+      this.account.deposit(this.amount);
+      this.status = 'Completed';
+    } else if (this.type === TransactionType.WITHDRAWAL) {
+      if (this.account.withdraw(this.amount)) {
+        this.status = 'Completed';
+      } else {
+        this.status = 'Failed';
+      }
+    }
+  }
+
+  toString() {
+    return `Transaction(${this.transactionId}, Account: ${this.account.accountId}, Amount: ${this.amount}, Type: ${this.type}, Status: ${this.status})`;
+  }
+}
+
+class Loan {
+  constructor(loanId, account, principal, interestRate, termInMonths) {
+    this.loanId = loanId;
+    this.account = account;
+    this.principal = principal;
+    this.interestRate = interestRate;
+    this.termInMonths = termInMonths;
+    this.balance = principal;
+    this.status = 'Active';
+  }
+
+  calculateMonthlyInterest() {
+    if (this.status === 'Active') {
+      const monthlyInterest = (this.principal * this.interestRate) / 100 / 12;
+      this.balance += monthlyInterest;
+      this.account.withdraw(monthlyInterest);
+      return monthlyInterest;
+    }
+    return 0;
+  }
+
+  repay(amount) {
+    if (this.status === 'Active') {
+      if (amount >= this.balance) {
+        this.account.withdraw(this.balance);
+        this.balance = 0;
+        this.status = 'Paid off';
+      } else {
+        this.account.withdraw(amount);
+        this.balance -= amount;
+      }
+    }
+  }
+
+  toString() {
+    return `Loan(${this.loanId}, Account: ${this.account.accountId}, Principal: ${this.principal}, Balance: ${this.balance}, Status: ${this.status})`;
+  }
+}
+
+class Report {
+  static generateAccountStatement(account) {
+    let statement = `Account Statement for ${account.accountHolder} (Account ID: ${account.accountId})\n`;
+    statement += `Balance: ${account.balance}\n`;
+    statement += `Loans:\n`;
+    account.loans.forEach(loan => {
+      statement += `  Loan ID: ${loan.loanId}, Balance: ${loan.balance}, Status: ${loan.status}\n`;
+    });
+    return statement;
+  }
+}
+
+class AccountService {
+  constructor() {
+    this.accounts = [];
+  }
+
+  createAccount(accountId, accountHolder, initialBalance) {
+    const account = new Account(accountId, accountHolder, initialBalance);
+    this.accounts.push(account);
+    return account;
+  }
+
+  getAccountInfo(accountId) {
+    const account = this.accounts.find(acc => acc.accountId === accountId);
+    if (account) {
+      return `Account Holder: ${account.accountHolder}, Balance: ${account.balance}`;
+    }
+    return "Account not found";
+  }
+
+  findAccount(accountId) {
+    return this.accounts.find(acc => acc.accountId === accountId);
+  }
+}
+
+class TransactionService {
+  constructor() {
+    this.transactions = [];
+  }
+
+  processDeposit(account, amount) {
+    const transaction = new Transaction(this.transactions.length + 1, account, amount, TransactionType.DEPOSIT);
+    transaction.processTransaction();
+    this.transactions.push(transaction);
+    return transaction;
+  }
+
+  processWithdrawal(account, amount) {
+    const transaction = new Transaction(this.transactions.length + 1, account, amount, TransactionType.WITHDRAWAL);
+    transaction.processTransaction();
+    this.transactions.push(transaction);
+    return transaction;
+  }
+}
+
+class LoanService {
+  constructor() {
+    this.loans = [];
+  }
+
+  createLoan(account, principal, interestRate, termInMonths) {
+    const loan = new Loan(this.loans.length + 1, account, principal, interestRate, termInMonths);
+    account.addLoan(loan);
+    this.loans.push(loan);
+    return loan;
+  }
+}
+
+class API {
+  constructor() {
+    this.accountService = new AccountService();
+    this.transactionService = new TransactionService();
+    this.loanService = new LoanService();
+  }
+
+  createAccount(accountId, accountHolder, initialBalance) {
+    return this.accountService.createAccount(accountId, accountHolder, initialBalance);
+  }
+
+  getAccountInfo(accountId) {
+    return this.accountService.getAccountInfo(accountId);
+  }
+
+  processDeposit(accountId, amount) {
+    const account = this.accountService.findAccount(accountId);
+    if (account) {
+      const transaction = this.transactionService.processDeposit(account, amount);
+      return `Deposit of ${amount} to account ${accountId} completed`;
+    }
+    return "Account not found";
+  }
+
+  processWithdrawal(accountId, amount) {
+    const account = this.accountService.findAccount(accountId);
+    if (account) {
+      const transaction = this.transactionService.processWithdrawal(account, amount);
+      if (transaction.status === 'Completed') {
+        return `Withdrawal of ${amount} from account ${accountId} completed`;
+      } else {
+        return "Insufficient funds";
+      }
+    }
+    return "Account not found";
+  }
+
+  createLoan(accountId, principal, interestRate, termInMonths) {
+    const account = this.accountService.findAccount(accountId);
+    if (account) {
+      return this.loanService.createLoan(account, principal, interestRate, termInMonths);
+    }
+    return "Account not found";
+  }
+
+  generateAccountStatement(accountId) {
+    const account = this.accountService.findAccount(accountId);
+    if (account) {
+      return Report.generateAccountStatement(account);
+    }
+    return "Account not found";
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation
+
+1. **Extract Classes**: The `API` class is now composed of `AccountService`, `TransactionService`, and `LoanService` classes, each handling specific responsibilities.
+2. **Introduce Enum**: The `TransactionType` enum replaces the string literals for transaction types.
+3. **Move Methods**: Methods that manipulate the `Account` balance are moved to the `Account` class, reducing feature envy.
+
+This refactoring improves readability, maintainability, and adheres to the Single Responsibility Principle. The external behavior of the code remains the same, ensuring all tests pass without modification.

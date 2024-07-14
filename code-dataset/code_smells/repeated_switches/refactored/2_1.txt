@@ -1,0 +1,190 @@
+### Step 1: Identify the Code Smell in the Code
+
+The code contains several code smells:
+1. **Repeated Switches**: The `getFeatures` method in the `Account` class and the `generateReport` method in the `Bank` class both use switch statements based on the `accountType`.
+2. **Long Function**: The `generateReport` method in the `Bank` class is relatively long and can be broken down into smaller methods.
+3. **Feature Envy**: The `generateReport` method in the `Bank` class accesses the `accountType` and `balance` properties of the `Account` class, which suggests that this functionality might belong in the `Account` class itself.
+
+### Step 2: Definition of the Code Smell
+
+1. **Repeated Switches**: This occurs when the same switch statement (or series of if statements) appears in multiple places in the code. This can lead to code duplication and makes the code harder to maintain.
+2. **Long Function**: A function that is too long can be difficult to understand and maintain. It often indicates that the function is doing too much and should be broken down into smaller, more focused functions.
+3. **Feature Envy**: This occurs when a method in one class is more interested in the data of another class than its own. This often indicates that the method should be moved to the class it is more interested in.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Plan
+
+1. **Extract Methods**: Break down the `generateReport` method into smaller methods.
+2. **Move Methods**: Move the `generateReport` logic to the `Account` class.
+3. **Replace Switches with Polymorphism**: Use polymorphism to handle different account types.
+
+#### Refactored Code
+
+```javascript
+class Account {
+  constructor(accountNumber, accountType, balance) {
+      this.accountNumber = accountNumber;
+      this.accountType = accountType;
+      this.balance = balance;
+      this.features = this.getFeatures();
+  }
+
+  deposit(amount) {
+      this.balance += amount;
+  }
+
+  withdraw(amount) {
+      this.balance -= amount;
+  }
+
+  getBalance() {
+      return this.balance;
+  }
+
+  getFeatures() {
+      return this.accountType.getFeatures();
+  }
+
+  generateReport() {
+      return this.accountType.generateReport(this);
+  }
+}
+
+class AccountType {
+  getFeatures() {
+      throw new Error('getFeatures() must be implemented by subclass');
+  }
+
+  generateReport(account) {
+      throw new Error('generateReport() must be implemented by subclass');
+  }
+}
+
+class SavingsAccountType extends AccountType {
+  getFeatures() {
+      return ['Interest Accumulation', 'Limited Withdrawals'];
+  }
+
+  generateReport(account) {
+      return `Savings Account Report for ${account.accountNumber}: Balance is $${account.getBalance()}`;
+  }
+}
+
+class CheckingAccountType extends AccountType {
+  getFeatures() {
+      return ['Unlimited Transactions', 'Overdraft Protection'];
+  }
+
+  generateReport(account) {
+      return `Checking Account Report for ${account.accountNumber}: Balance is $${account.getBalance()}`;
+  }
+}
+
+class BusinessAccountType extends AccountType {
+  getFeatures() {
+      return ['Higher Withdrawal Limits', 'Business Loans'];
+  }
+
+  generateReport(account) {
+      return `Business Account Report for ${account.accountNumber}: Balance is $${account.getBalance()}`;
+  }
+}
+
+class BasicAccountType extends AccountType {
+  getFeatures() {
+      return ['Basic Features'];
+  }
+
+  generateReport(account) {
+      return `General Account Report for ${account.accountNumber}: Balance is $${account.getBalance()}`;
+  }
+}
+
+class Bank {
+  constructor() {
+      this.accounts = [];
+  }
+
+  addAccount(account) {
+      this.accounts.push(account);
+  }
+
+  getAccount(accountNumber) {
+      return this.accounts.find(acc => acc.accountNumber === accountNumber);
+  }
+
+  generateReport() {
+      return this.accounts.map(account => account.generateReport());
+  }
+}
+
+class API {
+  constructor() {
+      this.bank = new Bank();
+  }
+
+  createAccount(accountNumber, accountType, balance) {
+      let accountTypeInstance;
+      switch (accountType) {
+          case 'savings':
+              accountTypeInstance = new SavingsAccountType();
+              break;
+          case 'checking':
+              accountTypeInstance = new CheckingAccountType();
+              break;
+          case 'business':
+              accountTypeInstance = new BusinessAccountType();
+              break;
+          default:
+              accountTypeInstance = new BasicAccountType();
+      }
+      const account = new Account(accountNumber, accountTypeInstance, balance);
+      this.bank.addAccount(account);
+  }
+
+  deposit(accountNumber, amount) {
+      const account = this.bank.getAccount(accountNumber);
+      if (account) {
+          account.deposit(amount);
+      }
+  }
+
+  withdraw(accountNumber, amount) {
+      const account = this.bank.getAccount(accountNumber);
+      if (account) {
+          account.withdraw(amount);
+      }
+  }
+
+  getAccountFeatures(accountNumber) {
+      const account = this.bank.getAccount(accountNumber);
+      if (account) {
+          return account.features;
+      }
+      return null;
+  }
+
+  generateReport() {
+      return this.bank.generateReport();
+  }
+
+  getBalance(accountNumber) {
+      const account = this.bank.getAccount(accountNumber);
+      if (account) {
+          return account.getBalance();
+      }
+      return null;
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation
+
+1. **AccountType and Subclasses**: Created an `AccountType` class and its subclasses (`SavingsAccountType`, `CheckingAccountType`, `BusinessAccountType`, and `BasicAccountType`) to encapsulate the behavior specific to each account type.
+2. **Polymorphism**: Used polymorphism to handle different account types, eliminating the need for switch statements.
+3. **Generate Report**: Moved the `generateReport` method to the `Account` class and used the `AccountType` subclasses to generate the appropriate report.
+
+This refactoring improves readability, maintainability, and adheres to the principles of object-oriented design. The external behavior of the code remains the same, and the tests should still pass without any modifications.

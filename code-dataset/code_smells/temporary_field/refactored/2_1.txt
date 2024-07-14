@@ -1,0 +1,139 @@
+### Step 1: Identify the Code Smell in the Code
+
+The code contains several code smells:
+1. **Temporary Field**: The `tempApprovalStatus` field in the `LoanApplication` class is only used temporarily during the `processApplication` method.
+2. **Long Function**: The `processApplication` method in the `LoanApplication` class is doing multiple things.
+3. **Large Class**: The `LoanApplication` class has multiple responsibilities, including checking credit scores and finalizing approval.
+4. **Feature Envy**: The `LoanService` class is managing the `LoanApplication` objects, but it might be better to encapsulate some of this behavior within the `LoanApplication` class itself.
+
+### Step 2: Write Down the Definition of the Code Smell You Identified
+
+1. **Temporary Field**: A field that is set only in certain circumstances and is otherwise empty or null. This can make the code harder to understand and maintain.
+2. **Long Function**: A function that does too many things, making it difficult to understand and maintain.
+3. **Large Class**: A class that has too many responsibilities, making it difficult to understand and maintain.
+4. **Feature Envy**: A method that seems more interested in the data of another class than that of the class it is in.
+
+### Step 3: Refactor the Code
+
+#### Refactored Code
+
+```javascript
+class LoanApplication {
+  constructor(applicantName, loanAmount, creditScore) {
+      this.applicantName = applicantName;
+      this.loanAmount = loanAmount;
+      this.creditScore = creditScore;
+  }
+
+  isCreditScoreSufficient() {
+      return this.creditScore >= 700;
+  }
+
+  getApprovalStatus() {
+      return this.isCreditScoreSufficient() ? 'Approved' : 'Pending Further Review';
+  }
+
+  finalizeApproval() {
+      const approvalStatus = this.getApprovalStatus();
+      if (approvalStatus === 'Approved') {
+          console.log(`Loan for ${this.applicantName} has been approved for $${this.loanAmount}.`);
+      } else {
+          console.log(`Loan for ${this.applicantName} requires further review.`);
+      }
+  }
+
+  processApplication() {
+      this.finalizeApproval();
+  }
+}
+
+class LoanService {
+  constructor() {
+      this.loanApplications = [];
+  }
+
+  addLoanApplication(applicantName, loanAmount, creditScore) {
+      this.loanApplications.push(new LoanApplication(applicantName, loanAmount, creditScore));
+  }
+
+  processAllApplications() {
+      for (const application of this.loanApplications) {
+          application.processApplication();
+      }
+      return true;
+  }
+}
+
+class API {
+  constructor() {
+      this.loanService = new LoanService();
+  }
+
+  submitLoanApplication(applicantName, loanAmount, creditScore) {
+      this.loanService.addLoanApplication(applicantName, loanAmount, creditScore);
+  }
+
+  processLoanApplications() {
+      return this.loanService.processAllApplications();
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring
+
+1. **Temporary Field**: Removed the `tempApprovalStatus` field and replaced it with a method `getApprovalStatus` that computes the approval status on the fly.
+2. **Long Function**: Split the `processApplication` method into smaller methods: `isCreditScoreSufficient`, `getApprovalStatus`, and `finalizeApproval`.
+3. **Large Class**: The `LoanApplication` class is now more focused on its core responsibilities.
+4. **Feature Envy**: The `LoanService` class remains responsible for managing `LoanApplication` objects, but the `LoanApplication` class now encapsulates more of its own behavior.
+
+### Tests
+
+The tests remain the same, ensuring that the refactored code still passes all tests and maintains the same external behavior.
+
+```javascript
+const runDescribe = (API, description) => {
+  describe(description, () => {
+    let api;
+
+    beforeEach(() => {
+      api = new API();
+    });
+
+    test('should add and process loan application with high credit score successfully', () => {
+      const applicantDetails = { applicantName: 'John Doe', loanAmount: 10000, creditScore: 720 };
+      api.submitLoanApplication(applicantDetails.applicantName, applicantDetails.loanAmount, applicantDetails.creditScore);
+
+      const result = api.processLoanApplications();
+
+      expect(result).toBe(true);
+    });
+
+    test('should add and process loan application with low credit score successfully', () => {
+      const applicantDetails = { applicantName: 'Jane Smith', loanAmount: 15000, creditScore: 650 };
+      api.submitLoanApplication(applicantDetails.applicantName, applicantDetails.loanAmount, applicantDetails.creditScore);
+
+      const result = api.processLoanApplications();
+
+      expect(result).toBe(true);
+    });
+
+    test('should process multiple loan applications', () => {
+      const applicant1 = { applicantName: 'John Doe', loanAmount: 10000, creditScore: 720 };
+      const applicant2 = { applicantName: 'Jane Smith', loanAmount: 15000, creditScore: 650 };
+
+      api.submitLoanApplication(applicant1.applicantName, applicant1.loanAmount, applicant1.creditScore);
+      api.submitLoanApplication(applicant2.applicantName, applicant2.loanAmount, applicant2.creditScore);
+
+      const result = api.processLoanApplications();
+
+      expect(result).toBe(true);
+    });
+  });
+}
+
+module.exports = runDescribe;
+```
+
+This refactoring improves the readability and maintainability of the code while ensuring that all tests pass and the external behavior remains the same.

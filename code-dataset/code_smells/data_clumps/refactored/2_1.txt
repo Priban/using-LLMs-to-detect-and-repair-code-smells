@@ -1,0 +1,141 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Long Parameter List**: The `BankAccount` constructor has too many parameters.
+2. **Data Clumps**: The branch information (name, address, note) is always passed together.
+3. **Large Class**: The `BankAccount` class has multiple responsibilities, including handling branch information and account operations.
+
+### Step 2: Definition of the Code Smell
+
+1. **Long Parameter List**: A method or constructor that takes too many parameters, making it difficult to understand and use.
+2. **Data Clumps**: Groups of data that are often passed together, indicating they should be part of a single object.
+3. **Large Class**: A class that has too many responsibilities, making it difficult to maintain and understand.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Steps:
+
+1. **Extract Class**: Create a `Branch` class to encapsulate branch information.
+2. **Introduce Parameter Object**: Use the `Branch` class to reduce the parameter list in the `BankAccount` constructor.
+3. **Simplify the `BankAccount` class**: Move branch-related information to the `Branch` class.
+
+Here is the refactored code:
+
+```javascript
+class Branch {
+  constructor(name, address, note) {
+    this.name = name;
+    this.address = address;
+    this.note = note;
+  }
+}
+
+class BankAccount {
+  constructor(accountNumber, accountHolderName, balance, branch) {
+    this.accountNumber = accountNumber;
+    this.accountHolderName = accountHolderName;
+    this.balance = balance;
+    this.branch = branch;
+  }
+
+  deposit(amount) {
+    this.balance += amount;
+    return `Deposited ${amount}. New balance is ${this.balance}.`;
+  }
+
+  withdraw(amount) {
+    if (this.balance >= amount) {
+      this.balance -= amount;
+      return `Withdrew ${amount}. New balance is ${this.balance}.`;
+    } else {
+      return 'Insufficient balance.';
+    }
+  }
+
+  transfer(toAccount, amount) {
+    if (this.balance >= amount) {
+      this.balance -= amount;
+      toAccount.deposit(amount);
+      return `Transferred ${amount} to account number ${toAccount.accountNumber}. New balance is ${this.balance}.`;
+    } else {
+      return 'Insufficient balance.';
+    }
+  }
+}
+
+class BankService {
+  constructor() {
+    this.accounts = {};
+  }
+
+  addAccount(account) {
+    this.accounts[account.accountNumber] = account;
+  }
+
+  getAccount(accountNumber) {
+    return this.accounts[accountNumber];
+  }
+
+  deposit(accountNumber, amount) {
+    const account = this.getAccount(accountNumber);
+    if (account) {
+      return account.deposit(amount);
+    } else {
+      return 'Account not found.';
+    }
+  }
+
+  withdraw(accountNumber, amount) {
+    const account = this.getAccount(accountNumber);
+    if (account) {
+      return account.withdraw(amount);
+    } else {
+      return 'Account not found.';
+    }
+  }
+
+  transfer(fromAccountNumber, toAccountNumber, amount) {
+    const fromAccount = this.getAccount(fromAccountNumber);
+    const toAccount = this.getAccount(toAccountNumber);
+    if (fromAccount && toAccount) {
+      return fromAccount.transfer(toAccount, amount);
+    } else {
+      return 'One or both accounts not found.';
+    }
+  }
+}
+
+class API {
+  constructor() {
+    this.bankService = new BankService();
+  }
+
+  addAccount(accountNumber, accountHolderName, balance, branchName, branchAddress, branchNote) {
+    const branch = new Branch(branchName, branchAddress, branchNote);
+    const account = new BankAccount(accountNumber, accountHolderName, balance, branch);
+    this.bankService.addAccount(account);
+  }
+
+  deposit(accountNumber, amount) {
+    return this.bankService.deposit(accountNumber, amount);
+  }
+
+  withdraw(accountNumber, amount) {
+    return this.bankService.withdraw(accountNumber, amount);
+  }
+
+  transfer(fromAccountNumber, toAccountNumber, amount) {
+    return this.bankService.transfer(fromAccountNumber, toAccountNumber, amount);
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation:
+
+1. **Branch Class**: Encapsulates branch-related information.
+2. **BankAccount Class**: Now takes a `Branch` object instead of individual branch parameters, reducing the parameter list.
+3. **API Class**: Creates a `Branch` object before creating a `BankAccount` object, maintaining the same external behavior.
+
+The test file remains the same, ensuring that the refactored code still passes all tests and maintains the same external behavior.

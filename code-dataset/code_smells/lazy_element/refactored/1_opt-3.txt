@@ -1,0 +1,136 @@
+### Step 1: Identify the Code Smell
+
+Upon reviewing the code, the following code smells are identified:
+
+1. **Long Function**: The `calculateTotal` method in the `ShoppingCart` class is doing too much in a single method.
+2. **Feature Envy**: The `PriceCalculator` class is only used by the `ShoppingCart` class, indicating that its functionality might be better placed within the `ShoppingCart` class.
+3. **Primitive Obsession**: The `taxRate` is a primitive value that could be encapsulated within a more meaningful class or structure.
+4. **Mysterious Name**: The method names are not very descriptive, especially `calculateTotal` and `printTotal`.
+
+### Step 2: Definition of the Code Smells
+
+1. **Long Function**: A method that is too long and does too much, making it hard to understand and maintain.
+2. **Feature Envy**: A method that seems more interested in a class other than the one it actually is in.
+3. **Primitive Obsession**: The use of primitive data types to represent domain ideas, which could be better represented with classes or structures.
+4. **Mysterious Name**: Names that do not clearly convey the purpose or usage of a method or variable.
+
+### Step 3: Refactor the Code
+
+#### Refactored Code:
+
+```javascript
+class TaxRate {
+    constructor(rate) {
+        this.rate = rate;
+    }
+
+    apply(price) {
+        return price * (1 + this.rate);
+    }
+}
+
+class ShoppingCart {
+    constructor(taxRate = 0.2) {
+        this.items = [];
+        this.taxRate = new TaxRate(taxRate);
+    }
+
+    addItem(name, price) {
+        this.items.push({ name, price });
+    }
+
+    calculateTotalPrice() {
+        return this.items.reduce((total, item) => {
+            return total + this.taxRate.apply(item.price);
+        }, 0);
+    }
+
+    printTotalPrice() {
+        const totalPrice = this.calculateTotalPrice();
+        console.log(`Total price with tax: $${totalPrice.toFixed(2)}`);
+    }
+}
+
+class API {
+    constructor() {
+        this.shoppingCart = new ShoppingCart();
+    }
+
+    addItemToCart(name, price) {
+        this.shoppingCart.addItem(name, price);
+    }
+
+    getTotalPrice() {
+        return this.shoppingCart.calculateTotalPrice();
+    }
+
+    printCartTotal() {
+        this.shoppingCart.printTotalPrice();
+    }
+}
+
+module.exports = { API };
+```
+
+#### Explanation of Refactoring:
+
+1. **Encapsulated Tax Rate**: Created a `TaxRate` class to encapsulate the tax rate and its application logic, addressing the Primitive Obsession smell.
+2. **Renamed Methods**: Renamed `calculateTotal` to `calculateTotalPrice` and `printTotal` to `printTotalPrice` for better clarity.
+3. **Removed `PriceCalculator`**: Moved the tax calculation logic into the `TaxRate` class, eliminating the need for the `PriceCalculator` class and addressing the Feature Envy smell.
+4. **Simplified `calculateTotalPrice`**: The `calculateTotalPrice` method is now more focused and easier to understand, addressing the Long Function smell.
+
+### Tests
+
+The test file remains the same, as the external behavior of the code has not changed. The refactored code should still pass all the tests.
+
+```javascript
+const runDescribe = (API, description) => {
+  describe(description, () => {
+    let api;
+
+    beforeEach(() => {
+      api = new API();
+    });
+
+    test('should add item to cart and calculate total price with tax', () => {
+      api.addItemToCart('Laptop', 1000);
+      api.addItemToCart('Phone', 500);
+
+      const totalPrice = api.getTotalPrice();
+
+      expect(totalPrice).toBeCloseTo(1800); // 1000 * 1.2 + 500 * 1.2 = 1200 + 600 = 1800
+    });
+
+    test('should print total price correctly', () => {
+      console.log = jest.fn();
+
+      api.addItemToCart('Laptop', 1000);
+      api.addItemToCart('Phone', 500);
+
+      api.printCartTotal();
+
+      expect(console.log).toHaveBeenCalledWith('Total price with tax: $1800.00');
+    });
+
+    test('should handle empty cart', () => {
+      const totalPrice = api.getTotalPrice();
+
+      expect(totalPrice).toBe(0);
+    });
+
+    test('should add multiple items and calculate total price', () => {
+      api.addItemToCart('Laptop', 1000);
+      api.addItemToCart('Phone', 500);
+      api.addItemToCart('Headphones', 200);
+
+      const totalPrice = api.getTotalPrice();
+
+      expect(totalPrice).toBeCloseTo(2040); // 1000 * 1.2 + 500 * 1.2 + 200 * 1.2 = 1200 + 600 + 240 = 2040
+    });
+  });
+}
+
+module.exports = runDescribe;
+```
+
+By following these steps, the code is now more readable, maintainable, and adheres to good design principles.

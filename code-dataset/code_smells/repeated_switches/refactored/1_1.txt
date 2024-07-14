@@ -1,0 +1,123 @@
+### Step 1: Identify the Code Smell in the Code
+
+The code contains several code smells:
+1. **Long Function**: The `applyDiscounts` and `calculateShipping` methods in the `ShoppingCart` class are long and contain repeated switch statements.
+2. **Repeated Switches**: The `applyDiscounts` and `calculateShipping` methods both use switch statements based on the `category` of the item.
+3. **Feature Envy**: The `applyDiscounts` and `calculateShipping` methods in the `ShoppingCart` class are doing operations that are more related to the `CartItem` class.
+4. **Large Class**: The `ShoppingCart` class is handling too many responsibilities.
+
+### Step 2: Definition of the Code Smell
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Repeated Switches**: The same switch statement (or series of if statements) appears in multiple places in the code.
+3. **Feature Envy**: A method that seems more interested in the data of another class than that of the class it is in.
+4. **Large Class**: A class that has grown too large and is trying to do too much, making it difficult to understand and maintain.
+
+### Step 3: Refactor the Code
+
+To address these code smells, we can refactor the code by moving the discount and shipping logic to the `CartItem` class and simplifying the `ShoppingCart` class.
+
+#### Refactored Code
+
+```javascript
+class CartItem {
+    constructor(name, price, quantity, category) {
+        this.name = name;
+        this.price = price;
+        this.quantity = quantity;
+        this.category = category;
+        this.discount = 0; // Added discount property
+    }
+
+    getTotalPrice() {
+        return this.price * this.quantity - this.discount;
+    }
+
+    applyDiscount() {
+        const discountRates = {
+            'electronics': 0.10,
+            'books': 0.15,
+            'clothing': 0.05,
+            'default': 0
+        };
+        const discountRate = discountRates[this.category] || discountRates['default'];
+        this.discount = this.price * this.quantity * discountRate;
+    }
+
+    getShippingCost() {
+        const shippingCosts = {
+            'electronics': 10,
+            'books': 5,
+            'clothing': 3,
+            'default': 8
+        };
+        return shippingCosts[this.category] || shippingCosts['default'];
+    }
+}
+
+class ShoppingCart {
+    constructor() {
+        this.items = [];
+    }
+
+    addItem(item) {
+        this.items.push(item);
+    }
+
+    getTotalPrice() {
+        return this.items.reduce((total, item) => total += item.getTotalPrice(), 0);
+    }
+
+    applyDiscounts() {
+        this.items.forEach(item => item.applyDiscount());
+    }
+
+    calculateShipping() {
+        return this.items.reduce((total, item) => total += item.getShippingCost(), 0);
+    }
+}
+
+class Order {
+    constructor(cart) {
+        this.cart = cart;
+    }
+
+    checkout() {
+        this.cart.applyDiscounts();
+        const totalPrice = this.cart.getTotalPrice();
+        const shippingCost = this.cart.calculateShipping();
+        const grandTotal = totalPrice + shippingCost;
+
+        console.log(`Total Price: $${totalPrice.toFixed(2)}`);
+        console.log(`Shipping Cost: $${shippingCost.toFixed(2)}`);
+        console.log(`Grand Total: $${grandTotal.toFixed(2)}`);
+        return { totalPrice, shippingCost, grandTotal };
+    }
+}
+
+class API {
+    constructor() {
+        this.cart = new ShoppingCart();
+    }
+
+    addItemToCart(name, price, quantity, category) {
+        const item = new CartItem(name, price, quantity, category);
+        this.cart.addItem(item);
+    }
+
+    checkout() {
+        const order = new Order(this.cart);
+        return order.checkout();
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring
+
+1. **Moved Discount Logic to `CartItem`**: The `applyDiscount` method is now part of the `CartItem` class, which encapsulates the discount logic based on the category.
+2. **Moved Shipping Logic to `CartItem`**: The `getShippingCost` method is now part of the `CartItem` class, which encapsulates the shipping cost logic based on the category.
+3. **Simplified `ShoppingCart`**: The `applyDiscounts` and `calculateShipping` methods in the `ShoppingCart` class now delegate the logic to the `CartItem` class, making the `ShoppingCart` class simpler and more focused on its primary responsibility.
+
+This refactoring improves readability and maintainability by reducing the size of the `ShoppingCart` class and encapsulating related logic within the `CartItem` class. The external behavior of the code remains the same, and the tests should still pass without any modifications.

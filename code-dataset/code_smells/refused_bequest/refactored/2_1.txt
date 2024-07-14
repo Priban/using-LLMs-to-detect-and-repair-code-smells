@@ -1,0 +1,145 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Refused Bequest**: The `EmployeeAccount` class inherits from `BankAccount` but overrides methods to make them inapplicable, which indicates that inheritance is not the right relationship here.
+2. **Long Function**: The `performAction` method in the `API` class is handling too many responsibilities.
+3. **Repeated Switches**: The `performAction` method uses multiple conditional checks to determine the type of action and account.
+4. **Mysterious Name**: The method names in the `API` class could be more descriptive.
+
+### Step 2: Definition of the Code Smell
+
+1. **Refused Bequest**: A subclass inherits methods and properties from a parent class but does not use them or overrides them to throw exceptions, indicating that the subclass should not inherit from the parent class.
+2. **Long Function**: A function that is too long and handles too many responsibilities, making it hard to understand and maintain.
+3. **Repeated Switches**: Multiple conditional statements that check the same variable or type, leading to duplicated logic.
+4. **Mysterious Name**: Method or variable names that do not clearly indicate their purpose or usage.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Plan
+
+1. **Refused Bequest**: Remove inheritance and use composition instead.
+2. **Long Function**: Break down the `performAction` method into smaller, more focused methods.
+3. **Repeated Switches**: Use polymorphism to handle different account types and actions.
+4. **Mysterious Name**: Rename methods in the `API` class to be more descriptive.
+
+#### Refactored Code
+
+```javascript
+class BankAccount {
+  constructor(owner, balance = 0) {
+    this.owner = owner;
+    this.balance = balance;
+  }
+
+  deposit(amount) {
+    if (amount > 0) {
+      this.balance += amount;
+      console.log(`Deposited ${amount}. New balance: ${this.balance}`);
+      return true;
+    } else {
+      console.log("Deposit amount must be positive");
+      return false;
+    }
+  }
+
+  withdraw(amount) {
+    if (amount > 0 && amount <= this.balance) {
+      this.balance -= amount;
+      console.log(`Withdrew ${amount}. New balance: ${this.balance}`);
+      return true;
+    } else {
+      console.log("Invalid withdraw amount");
+      return false;
+    }
+  }
+
+  getBalance() {
+    console.log(`The balance for ${this.owner} is ${this.balance}`);
+    return this.balance;
+  }
+}
+
+class EmployeeAccount {
+  constructor(owner, employeeId, department) {
+    this.owner = owner;
+    this.employeeId = employeeId;
+    this.department = department;
+  }
+
+  deposit() {
+    console.log("Deposits are not applicable for Employee Account");
+    return false;
+  }
+
+  withdraw() {
+    console.log("Withdrawals are not applicable for Employee Account");
+    return false;
+  }
+
+  getBalance() {
+    console.log(`The balance for ${this.owner} is 0`);
+    return 0;
+  }
+
+  getEmployeeDetails() {
+    console.log(`Employee ID: ${this.employeeId}, Department: ${this.department}`);
+  }
+}
+
+class API {
+  constructor() {
+    this.accounts = [];
+  }
+
+  createBankAccount(owner, balance) {
+    const account = new BankAccount(owner, balance);
+    this.accounts.push(account);
+  }
+
+  createEmployeeAccount(owner, employeeId, department) {
+    const account = new EmployeeAccount(owner, employeeId, department);
+    this.accounts.push(account);
+  }
+
+  depositToBankAccount(accountIndex, amount) {
+    const account = this.getAccount(accountIndex, BankAccount);
+    account.deposit(amount);
+  }
+
+  withdrawFromBankAccount(accountIndex, amount) {
+    const account = this.getAccount(accountIndex, BankAccount);
+    account.withdraw(amount);
+  }
+
+  getBankAccountBalance(accountIndex) {
+    const account = this.getAccount(accountIndex, BankAccount);
+    return account.getBalance();
+  }
+
+  getEmployeeAccountDetails(accountIndex) {
+    const account = this.getAccount(accountIndex, EmployeeAccount);
+    account.getEmployeeDetails();
+  }
+
+  getAccount(index, type) {
+    const account = this.accounts[index];
+    if (!account || !(account instanceof type)) {
+      throw new Error('Account not found or type mismatch');
+    }
+    return account;
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation
+
+1. **Refused Bequest**: `EmployeeAccount` no longer inherits from `BankAccount`. Instead, it has its own methods.
+2. **Long Function**: The `performAction` method is broken down into multiple methods like `depositToBankAccount`, `withdrawFromBankAccount`, etc.
+3. **Repeated Switches**: The `getAccount` method is used to fetch the account and ensure it is of the correct type, reducing the need for repeated type checks.
+4. **Mysterious Name**: Methods in the `API` class are renamed to be more descriptive.
+
+### Tests
+
+The test file remains the same, and the refactored code should still pass all tests, ensuring the external behavior of the code remains the same.

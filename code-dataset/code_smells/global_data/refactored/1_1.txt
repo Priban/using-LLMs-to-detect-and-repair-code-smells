@@ -1,0 +1,129 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Global Data**: The `products` and `cart` arrays are global variables.
+2. **Long Function**: The `checkout` function is doing multiple things (calculating total and clearing the cart).
+3. **Data Clumps**: The `product` object is being passed around in multiple places.
+4. **Feature Envy**: The functions are manipulating the `cart` array directly, which could be encapsulated within a class.
+
+### Step 2: Definition of the Code Smells
+
+1. **Global Data**: Using global variables can lead to code that is difficult to understand and maintain because the state can be changed from anywhere in the code.
+2. **Long Function**: Functions that do too much can be hard to understand and maintain. They should be broken down into smaller, more focused functions.
+3. **Data Clumps**: Groups of data that are often passed together should be encapsulated within a class or a data structure.
+4. **Feature Envy**: When a function is more interested in the data of another object than its own, it should probably be moved to the object it is so interested in.
+
+### Step 3: Refactor the Code
+
+#### Refactored Code:
+
+```javascript
+class Product {
+  constructor(id, name, price) {
+    this.id = id;
+    this.name = name;
+    this.price = price;
+  }
+}
+
+class CartItem {
+  constructor(product, quantity) {
+    this.product = product;
+    this.quantity = quantity;
+  }
+}
+
+class Cart {
+  constructor() {
+    this.items = [];
+  }
+
+  addProduct(product, quantity) {
+    const cartItemIndex = this.items.findIndex(item => item.product.id === product.id);
+    if (cartItemIndex > -1) {
+      this.items[cartItemIndex].quantity += quantity;
+    } else {
+      this.items.push(new CartItem(product, quantity));
+    }
+  }
+
+  removeProduct(productId) {
+    const cartItemIndex = this.items.findIndex(item => item.product.id === productId);
+    if (cartItemIndex > -1) {
+      this.items.splice(cartItemIndex, 1);
+    }
+  }
+
+  updateProductQuantity(productId, quantity) {
+    const cartItemIndex = this.items.findIndex(item => item.product.id === productId);
+    if (cartItemIndex > -1) {
+      this.items[cartItemIndex].quantity = quantity;
+    }
+  }
+
+  calculateTotal() {
+    return this.items.reduce((total, item) => total + item.product.price * item.quantity, 0);
+  }
+
+  clear() {
+    this.items = [];
+  }
+}
+
+class API {
+  constructor() {
+    this.products = [
+      new Product(1, 'Laptop', 1000),
+      new Product(2, 'Smartphone', 500),
+      new Product(3, 'Tablet', 750),
+    ];
+    this.cart = new Cart();
+  }
+
+  addProductToCart(productId, quantity) {
+    const product = this.products.find(product => product.id === productId);
+    if (product) {
+      this.cart.addProduct(product, quantity);
+    }
+  }
+
+  removeProductFromCart(productId) {
+    this.cart.removeProduct(productId);
+  }
+
+  clearCart() {
+    this.cart.clear();
+  }
+
+  updateProductQuantity(productId, quantity) {
+    this.cart.updateProductQuantity(productId, quantity);
+  }
+
+  calculateTotal() {
+    return this.cart.calculateTotal();
+  }
+
+  checkout() {
+    if (this.cart.items.length === 0) {
+      console.log('Your cart is empty.');
+      return;
+    }
+
+    const totalAmount = this.calculateTotal();
+    console.log(`The total amount is $${totalAmount}.`);
+
+    this.clearCart();
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring:
+
+1. **Encapsulated Data**: The `products` and `cart` arrays are now encapsulated within the `API` class.
+2. **Created Classes**: Created `Product`, `CartItem`, and `Cart` classes to encapsulate related data and behavior.
+3. **Moved Methods**: Moved methods related to cart operations into the `Cart` class to reduce feature envy and improve cohesion.
+4. **Simplified API Class**: The `API` class now delegates cart operations to the `Cart` class, making it simpler and more focused.
+
+This refactoring improves readability, maintainability, and encapsulation while ensuring the external behavior remains the same. The test file remains unchanged and should still pass all tests.

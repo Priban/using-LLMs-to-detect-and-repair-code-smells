@@ -1,0 +1,135 @@
+### Step 1: Identify the Code Smell in the Code
+
+The code contains several code smells:
+1. **Long Function**: The `performTransaction` method in the `Bank` class is quite long and does multiple things.
+2. **Duplicated Code**: The code for finding an account by `accountId` is repeated.
+3. **Feature Envy**: The `performTransaction` method in the `Bank` class is doing too much work that could be encapsulated within the `Account` class.
+4. **Mysterious Name**: The method names like `deduct` and `add` in the `Account` class could be more descriptive.
+
+### Step 2: Write Down the Definition of the Code Smell You Identified
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Duplicated Code**: Code that is repeated in multiple places, making it harder to maintain.
+3. **Feature Envy**: A method that seems more interested in the data of another class than its own.
+4. **Mysterious Name**: A method or variable name that does not clearly indicate its purpose.
+
+### Step 3: Refactor the Code
+
+#### Refactored Code
+
+```javascript
+class Account {
+  constructor(accountId, owner, balance) {
+      this.accountId = accountId;
+      this.owner = owner;
+      this.balance = balance;
+  }
+
+  withdraw(amount) {
+      if (this.balance < amount) {
+          throw new Error("Insufficient balance");
+      }
+      this.balance -= amount;
+  }
+
+  deposit(amount) {
+      this.balance += amount;
+  }
+
+  getDetails() {
+      return {
+          accountId: this.accountId,
+          owner: this.owner,
+          balance: this.balance
+      };
+  }
+}
+
+class Bank {
+  constructor() {
+      this.accounts = [
+          new Account(1, "Alice", 1000),
+          new Account(2, "Bob", 500)
+      ];
+      this.transactionLogs = [];
+  }
+
+  findAccountById(accountId) {
+      return this.accounts.find(acc => acc.accountId === accountId);
+  }
+
+  performTransaction(senderId, receiverId, amount) {
+      try {
+          const senderAccount = this.findAccountById(senderId);
+          const receiverAccount = this.findAccountById(receiverId);
+
+          if (!senderAccount) {
+              console.log("Sender account not found.");
+              return false;
+          }
+
+          if (!receiverAccount) {
+              console.log("Receiver account not found.");
+              return false;
+          }
+
+          senderAccount.withdraw(amount);
+          receiverAccount.deposit(amount);
+
+          this.logTransaction(senderAccount, receiverAccount, amount);
+          console.log(`Transaction complete: ${senderAccount.owner} to ${receiverAccount.owner}, Amount: $${amount}`);
+          return true;
+      } catch (error) {
+          console.log(error.message);
+          return false;
+      }
+  }
+
+  logTransaction(senderAccount, receiverAccount, amount) {
+      this.transactionLogs.push({
+          from: senderAccount.accountId,
+          to: receiverAccount.accountId,
+          amount: amount,
+          date: new Date()
+      });
+  }
+
+  getTransactionLogs() {
+      return this.transactionLogs;
+  }
+
+  getAccountDetails(accountId) {
+      const account = this.findAccountById(accountId);
+      return account ? account.getDetails() : null;
+  }
+}
+
+class API {
+  constructor() {
+      this.bank = new Bank();
+  }
+
+  performTransaction(senderId, receiverId, amount) {
+      return this.bank.performTransaction(senderId, receiverId, amount);
+  }
+
+  getTransactionLogs() {
+      return this.bank.getTransactionLogs();
+  }
+
+  getAccountDetails(accountId) {
+      return this.bank.getAccountDetails(accountId);
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring
+
+1. **Long Function**: The `performTransaction` method in the `Bank` class has been broken down into smaller methods: `findAccountById` and `logTransaction`.
+2. **Duplicated Code**: The code for finding an account by `accountId` has been moved to a separate method `findAccountById`.
+3. **Feature Envy**: The `withdraw` and `deposit` methods in the `Account` class now handle the balance checks and updates, reducing the responsibility of the `performTransaction` method in the `Bank` class.
+4. **Mysterious Name**: The method names `deduct` and `add` have been changed to `withdraw` and `deposit` to make their purpose clearer.
+
+This refactoring improves readability and maintainability while ensuring that the external behavior of the code remains the same. The test file remains unchanged, and all tests should still pass.

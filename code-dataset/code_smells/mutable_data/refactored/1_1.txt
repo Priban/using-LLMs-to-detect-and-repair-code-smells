@@ -1,0 +1,200 @@
+### Step 1: Identify the Code Smell in the Code
+
+The code contains several code smells:
+1. **Long Function**: The `orderProduct` method in the `API` class is doing too much.
+2. **Feature Envy**: The `UserCart` class is accessing the `Product` class's data directly.
+3. **Data Clumps**: The `addProduct` method in the `Product` class and the `addToCart` method in the `UserCart` class have multiple parameters that are often used together.
+4. **Large Class**: The `API` class is handling too many responsibilities.
+5. **Primitive Obsession**: The `Product` and `User` classes use plain objects to store data, which could be better encapsulated in their own classes.
+
+### Step 2: Write Down the Definition of the Code Smell You Identified
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Feature Envy**: A method that seems more interested in the data of another class than that of the class it is in.
+3. **Data Clumps**: Groups of data that are often passed together in multiple places, indicating they should be encapsulated in their own class.
+4. **Large Class**: A class that has too many responsibilities, making it hard to understand and maintain.
+5. **Primitive Obsession**: The use of primitive data types to represent domain ideas, which could be better represented by small classes.
+
+### Step 3: Refactor the Code
+
+#### Refactored Code
+
+```javascript
+class Product {
+  constructor(id, name, price, stock) {
+    this.id = id;
+    this.name = name;
+    this.price = price;
+    this.stock = stock;
+  }
+
+  updateStock(quantity) {
+    this.stock -= quantity;
+  }
+
+  updatePrice(newPrice) {
+    this.price = newPrice;
+  }
+}
+
+class ProductCatalog {
+  constructor() {
+    this.products = {};
+  }
+
+  addProduct(product) {
+    this.products[product.id] = product;
+  }
+
+  getProduct(productId) {
+    return this.products[productId];
+  }
+}
+
+class UserCart {
+  constructor() {
+    this.userCarts = {
+      user1: [],
+      user2: [],
+    };
+  }
+
+  addToCart(user, product, quantity) {
+    if (product && product.stock >= quantity) {
+      this.userCarts[user].push({ product, quantity });
+      product.updateStock(quantity);
+    }
+  }
+
+  removeFromCart(user, productId) {
+    for (let i = 0; i < this.userCarts[user].length; i++) {
+      if (this.userCarts[user][i].product.id === productId) {
+        const quantity = this.userCarts[user][i].quantity;
+        this.userCarts[user][i].product.updateStock(-quantity);
+        this.userCarts[user].splice(i, 1);
+        break;
+      }
+    }
+  }
+
+  getUserCart(user) {
+    return this.userCarts[user];
+  }
+
+  clearCart(user) {
+    this.userCarts[user] = [];
+  }
+}
+
+class Order {
+  constructor() {
+    this.orders = [];
+  }
+
+  placeOrder(user, userCart) {
+    const cartItems = userCart.getUserCart(user);
+    if (cartItems) {
+      let totalPrice = 0;
+      cartItems.forEach(item => {
+        totalPrice += item.product.price * item.quantity;
+      });
+      this.orders.push({ user, items: cartItems, totalPrice });
+      userCart.clearCart(user);
+    }
+  }
+}
+
+class User {
+  constructor(id, name, address) {
+    this.id = id;
+    this.name = name;
+    this.address = address;
+  }
+
+  updateAddress(newAddress) {
+    this.address = newAddress;
+  }
+}
+
+class UserDirectory {
+  constructor() {
+    this.users = {
+      user1: new User('user1', 'Alice', '123 Main St'),
+      user2: new User('user2', 'Bob', '456 Maple Ave'),
+    };
+  }
+
+  getUser(userId) {
+    return this.users[userId];
+  }
+
+  updateUserAddress(userId, newAddress) {
+    const user = this.getUser(userId);
+    if (user) {
+      user.updateAddress(newAddress);
+    }
+  }
+}
+
+class API {
+  constructor() {
+    this.productCatalog = new ProductCatalog();
+    this.userCart = new UserCart();
+    this.orderClass = new Order();
+    this.userDirectory = new UserDirectory();
+  }
+
+  addProduct(productId, name, price, stock) {
+    const product = new Product(productId, name, price, stock);
+    this.productCatalog.addProduct(product);
+  }
+
+  getProductInfo(productId) {
+    const product = this.productCatalog.getProduct(productId);
+    if (product) {
+      return `Product Name: ${product.name}, Price: ${product.price}`;
+    }
+    return "Product not found";
+  }
+
+  orderProduct(user, productId, quantity) {
+    const product = this.productCatalog.getProduct(productId);
+    if (product && product.stock >= quantity) {
+      this.userCart.addToCart(user, product, quantity);
+      this.orderClass.placeOrder(user, this.userCart);
+      return `Ordered ${quantity} of ${product.name}`;
+    }
+    return "Insufficient stock or product not found";
+  }
+
+  updateProductPrice(productId, newPrice) {
+    const product = this.productCatalog.getProduct(productId);
+    if (product) {
+      product.updatePrice(newPrice);
+      return "Product price updated";
+    }
+    return "Product not found";
+  }
+
+  updateUserAddress(user, newAddress) {
+    const userObj = this.userDirectory.getUser(user);
+    if (userObj) {
+      this.userDirectory.updateUserAddress(user, newAddress);
+      return "Address updated";
+    }
+    return "User not found";
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring
+
+1. **Encapsulated Product Data**: Created a `Product` class to encapsulate product data and behavior.
+2. **Encapsulated User Data**: Created a `User` class to encapsulate user data and behavior.
+3. **Separated Concerns**: Created `ProductCatalog` and `UserDirectory` classes to manage collections of products and users, respectively.
+4. **Simplified API Methods**: Simplified the `API` methods by delegating responsibilities to the appropriate classes.
+5. **Reduced Parameter Lists**: Reduced the number of parameters by encapsulating related data in classes.
+
+This refactoring improves readability, maintainability, and adheres to the Single Responsibility Principle. The external behavior of the code remains the same, ensuring all tests pass without modification.

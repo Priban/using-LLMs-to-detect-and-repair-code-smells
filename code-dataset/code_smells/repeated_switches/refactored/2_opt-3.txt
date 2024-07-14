@@ -1,0 +1,160 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Repeated Switches**: The `getFeatures` method in the `Account` class and the `generateReport` method in the `Bank` class both use switch statements based on `accountType`.
+2. **Large Class**: The `Account` class has multiple responsibilities, including managing account details and determining features.
+3. **Long Function**: The `generateReport` method in the `Bank` class is quite long and can be broken down.
+4. **Feature Envy**: The `generateReport` method in the `Bank` class accesses the `accountType` and `balance` properties of the `Account` class, indicating that this logic might belong in the `Account` class.
+
+### Step 2: Definition of the Code Smell
+
+1. **Repeated Switches**: This occurs when the same switch statement (or series of if statements) appears in multiple places in the code. This can lead to code duplication and makes the code harder to maintain.
+2. **Large Class**: A class that has too many responsibilities and methods, making it difficult to understand and maintain.
+3. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+4. **Feature Envy**: This occurs when a method in one class is more interested in the details of another class than its own.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Plan
+
+1. **Extract Method**: Extract the switch statements into separate methods.
+2. **Move Method**: Move the `getFeatures` logic to a new `AccountType` class.
+3. **Introduce Polymorphism**: Use polymorphism to handle different account types.
+
+#### Refactored Code
+
+```javascript
+class AccountType {
+  constructor(type) {
+    this.type = type;
+  }
+
+  getFeatures() {
+    switch (this.type) {
+      case 'savings':
+        return ['Interest Accumulation', 'Limited Withdrawals'];
+      case 'checking':
+        return ['Unlimited Transactions', 'Overdraft Protection'];
+      case 'business':
+        return ['Higher Withdrawal Limits', 'Business Loans'];
+      default:
+        return ['Basic Features'];
+    }
+  }
+
+  generateReport(accountNumber, balance) {
+    switch (this.type) {
+      case 'savings':
+        return `Savings Account Report for ${accountNumber}: Balance is $${balance}`;
+      case 'checking':
+        return `Checking Account Report for ${accountNumber}: Balance is $${balance}`;
+      case 'business':
+        return `Business Account Report for ${accountNumber}: Balance is $${balance}`;
+      default:
+        return `General Account Report for ${accountNumber}: Balance is $${balance}`;
+    }
+  }
+}
+
+class Account {
+  constructor(accountNumber, accountType, balance) {
+    this.accountNumber = accountNumber;
+    this.accountType = new AccountType(accountType);
+    this.balance = balance;
+  }
+
+  deposit(amount) {
+    this.balance += amount;
+  }
+
+  withdraw(amount) {
+    this.balance -= amount;
+  }
+
+  getBalance() {
+    return this.balance;
+  }
+
+  getFeatures() {
+    return this.accountType.getFeatures();
+  }
+
+  generateReport() {
+    return this.accountType.generateReport(this.accountNumber, this.balance);
+  }
+}
+
+class Bank {
+  constructor() {
+    this.accounts = [];
+  }
+
+  addAccount(account) {
+    this.accounts.push(account);
+  }
+
+  getAccount(accountNumber) {
+    return this.accounts.find(acc => acc.accountNumber === accountNumber);
+  }
+
+  generateReport() {
+    return this.accounts.map(account => account.generateReport());
+  }
+}
+
+class API {
+  constructor() {
+    this.bank = new Bank();
+  }
+
+  createAccount(accountNumber, accountType, balance) {
+    const account = new Account(accountNumber, accountType, balance);
+    this.bank.addAccount(account);
+  }
+
+  deposit(accountNumber, amount) {
+    const account = this.bank.getAccount(accountNumber);
+    if (account) {
+      account.deposit(amount);
+    }
+  }
+
+  withdraw(accountNumber, amount) {
+    const account = this.bank.getAccount(accountNumber);
+    if (account) {
+      account.withdraw(amount);
+    }
+  }
+
+  getAccountFeatures(accountNumber) {
+    const account = this.bank.getAccount(accountNumber);
+    if (account) {
+      return account.getFeatures();
+    }
+    return null;
+  }
+
+  generateReport() {
+    return this.bank.generateReport();
+  }
+
+  getBalance(accountNumber) {
+    const account = this.bank.getAccount(accountNumber);
+    if (account) {
+      return account.getBalance();
+    }
+    return null;
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation
+
+1. **AccountType Class**: Introduced a new `AccountType` class to handle account type-specific logic.
+2. **Account Class**: The `Account` class now delegates feature and report generation to the `AccountType` class.
+3. **Bank Class**: The `generateReport` method now simply calls the `generateReport` method on each `Account` instance.
+4. **API Class**: No changes were needed here as it interacts with the `Account` and `Bank` classes, which have been refactored.
+
+This refactoring improves readability, maintainability, and adheres to the Single Responsibility Principle. The external behavior of the code remains the same, and it should still pass all tests.

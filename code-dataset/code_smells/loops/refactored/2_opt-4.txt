@@ -1,0 +1,134 @@
+### Step 1: Identify the Code Smell
+
+The code contains the following code smells:
+1. **Long Function**: The `getTotalBalance` method in the `Bank` class uses a loop to calculate the total balance, which can be simplified.
+2. **Loops**: The loop in the `getTotalBalance` method can be replaced with a more concise and readable method.
+3. **Data Class**: The `BankAccount` class only contains data without any behavior.
+4. **Primitive Obsession**: The `BankAccount` class uses primitive types for `accountNumber` and `balance`, which could be encapsulated in more meaningful types.
+
+### Step 2: Definition of the Code Smells
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Loops**: Using explicit loops when higher-order functions like `map`, `reduce`, or `forEach` can be used to make the code more readable.
+3. **Data Class**: A class that contains only fields and no methods, which can lead to poor encapsulation.
+4. **Primitive Obsession**: The use of primitive data types instead of small objects for simple tasks, which can lead to code that is harder to understand and maintain.
+
+### Step 3: Refactor the Code
+
+Let's refactor the code to address these issues.
+
+#### Refactored Code:
+
+```javascript
+class BankAccount {
+  constructor(accountNumber, balance) {
+    this.accountNumber = accountNumber;
+    this.balance = balance;
+  }
+
+  getBalance() {
+    return this.balance;
+  }
+}
+
+class Bank {
+  constructor() {
+    this.accounts = [];
+  }
+
+  addAccount(account) {
+    this.accounts.push(account);
+  }
+
+  getTotalBalance() {
+    return this.accounts.reduce((total, account) => total + account.getBalance(), 0);
+  }
+}
+
+class API {
+  constructor() {
+    this.bank = new Bank();
+  }
+
+  addBankAccount(accountNumber, balance) {
+    const account = new BankAccount(accountNumber, balance);
+    this.bank.addAccount(account);
+  }
+
+  calculateTotalBalance() {
+    return this.bank.getTotalBalance();
+  }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring:
+
+1. **Long Function**: The `getTotalBalance` method has been refactored to use the `reduce` method, making it more concise and readable.
+2. **Loops**: The explicit loop in `getTotalBalance` has been replaced with the `reduce` method.
+3. **Data Class**: The `BankAccount` class now has a `getBalance` method, adding behavior to the class and improving encapsulation.
+4. **Primitive Obsession**: While we still use primitive types for `accountNumber` and `balance`, encapsulating the balance retrieval in a method (`getBalance`) improves the design and makes it easier to extend in the future.
+
+### Tests:
+
+The test file remains the same, ensuring that the refactored code still passes all tests and maintains the same external behavior.
+
+```javascript
+const runDescribe = (API, description) => {
+  describe(description, () => {
+    let api;
+
+    beforeEach(() => {
+      api = new API();
+    });
+
+    test('should add and calculate total balance for single account', () => {
+      api.addBankAccount(1, 1000);
+
+      const totalBalance = api.calculateTotalBalance();
+
+      expect(totalBalance).toBe(1000);
+    });
+
+    test('should add and calculate total balance for multiple accounts', () => {
+      api.addBankAccount(1, 1000);
+      api.addBankAccount(2, 2000);
+      api.addBankAccount(3, 1500);
+
+      const totalBalance = api.calculateTotalBalance();
+
+      expect(totalBalance).toBe(4500);
+    });
+
+    test('should handle no accounts gracefully', () => {
+      const totalBalance = api.calculateTotalBalance();
+
+      expect(totalBalance).toBe(0);
+    });
+
+    test('should handle adding accounts with zero balance', () => {
+      api.addBankAccount(1, 0);
+      api.addBankAccount(2, 0);
+
+      const totalBalance = api.calculateTotalBalance();
+
+      expect(totalBalance).toBe(0);
+    });
+
+    test('should correctly sum negative balances', () => {
+      api.addBankAccount(1, -500);
+      api.addBankAccount(2, 2000);
+      api.addBankAccount(3, -1500);
+
+      const totalBalance = api.calculateTotalBalance();
+
+      expect(totalBalance).toBe(0);
+    });
+  });
+}
+
+module.exports = runDescribe;
+```
+
+By refactoring the code, we have improved its readability and maintainability while ensuring that all tests still pass and the external behavior remains the same.

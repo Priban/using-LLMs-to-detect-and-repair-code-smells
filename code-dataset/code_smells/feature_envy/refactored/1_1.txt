@@ -1,0 +1,179 @@
+### Step 1: Identify the Code Smell in the Code
+
+The code contains several code smells:
+1. **Long Function**: The `displayCartContents` method in the `CartManager` class is doing too much.
+2. **Feature Envy**: The `CartManager` class is accessing too many details of the `ProductInventory` class.
+3. **Data Clumps**: The `Product` class has multiple attributes that are often used together.
+4. **Long Parameter List**: The constructor of the `Product` class has a long parameter list.
+5. **Duplicated Code**: The logic to find a product by ID is repeated in multiple methods.
+
+### Step 2: Definition of the Code Smells
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Feature Envy**: A method that seems more interested in the data of another class than that of the class it is in.
+3. **Data Clumps**: A group of data items that tend to be passed around together.
+4. **Long Parameter List**: A method or constructor that has too many parameters.
+5. **Duplicated Code**: Code that is repeated in multiple places, making it harder to maintain.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Steps
+
+1. **Extract Method**: Break down the `displayCartContents` method into smaller methods.
+2. **Move Method**: Move methods that are more related to `Product` into the `Product` class.
+3. **Introduce Parameter Object**: Use an object to encapsulate the parameters of the `Product` constructor.
+4. **Remove Duplicated Code**: Create a helper method to find a product by ID.
+
+Here is the refactored code:
+
+```javascript
+class Product {
+    constructor({ id, name, price, stock }) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.stock = stock;
+    }
+
+    updateStock(quantity) {
+        this.stock += quantity;
+    }
+
+    isAvailable(quantity) {
+        return this.stock >= quantity;
+    }
+
+    getPrice() {
+        return this.price;
+    }
+}
+
+class ProductInventory {
+    constructor() {
+        this.products = [];
+    }
+
+    findProductById(productId) {
+        return this.products.find(product => product.id === productId);
+    }
+
+    addProduct(product) {
+        this.products.push(product);
+    }
+
+    updateStock(productId, quantity) {
+        const product = this.findProductById(productId);
+        if (product) {
+            product.updateStock(quantity);
+        }
+    }
+
+    isProductAvailable(productId, quantity) {
+        const product = this.findProductById(productId);
+        return product ? product.isAvailable(quantity) : false;
+    }
+
+    getProductPrice(productId) {
+        const product = this.findProductById(productId);
+        return product ? product.getPrice() : 0;
+    }
+}
+
+class CartManager {
+    constructor(productInventory) {
+        this.productInventory = productInventory;
+        this.cart = [];
+    }
+
+    addToCart(productId, quantity) {
+        if (this.productInventory.isProductAvailable(productId, quantity)) {
+            const cartItem = this.cart.find(item => item.productId === productId);
+            if (cartItem) {
+                cartItem.quantity += quantity;
+            } else {
+                this.cart.push({ productId, quantity });
+            }
+            this.productInventory.updateStock(productId, -quantity);
+        } else {
+            console.log('Product is not available in the desired quantity.');
+        }
+    }
+
+    updateQuantity(productId, newQuantity) {
+        const cartItem = this.cart.find(item => item.productId === productId);
+        if (cartItem) {
+            const difference = newQuantity - cartItem.quantity;
+            if (this.productInventory.isProductAvailable(productId, difference)) {
+                cartItem.quantity = newQuantity;
+                this.productInventory.updateStock(productId, -difference);
+            } else {
+                console.log('Product is not available in the desired quantity.');
+            }
+        } else {
+            console.log('Product not found in cart.');
+        }
+    }
+
+    calculateTotal() {
+        return this.cart.reduce((total, cartItem) => {
+            const productPrice = this.productInventory.getProductPrice(cartItem.productId);
+            return total + (cartItem.quantity * productPrice);
+        }, 0);
+    }
+
+    displayCartContents() {
+        this.cart.forEach(cartItem => {
+            this.displayCartItem(cartItem);
+        });
+        this.displayTotalCartValue();
+    }
+
+    displayCartItem(cartItem) {
+        const product = this.productInventory.findProductById(cartItem.productId);
+        console.log(`Product: ${product.name}, Quantity: ${cartItem.quantity}, Price per item: ${product.price}`);
+    }
+
+    displayTotalCartValue() {
+        console.log(`Total Cart Value: ${this.calculateTotal()}`);
+    }
+}
+
+class API {
+    constructor() {
+        this.inventory = new ProductInventory();
+        this.cartManager = new CartManager(this.inventory);
+    }
+
+    addProductToInventory(id, name, price, stock) {
+        const product = new Product({ id, name, price, stock });
+        this.inventory.addProduct(product);
+    }
+
+    addToCart(productId, quantity) {
+        this.cartManager.addToCart(productId, quantity);
+    }
+
+    updateCartQuantity(productId, newQuantity) {
+        this.cartManager.updateQuantity(productId, newQuantity);
+    }
+
+    calculateTotal() {
+        return this.cartManager.calculateTotal();
+    }
+
+    displayCartContents() {
+        return this.cartManager.displayCartContents();
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Changes
+
+1. **Extract Method**: The `displayCartContents` method in `CartManager` is broken down into `displayCartItem` and `displayTotalCartValue`.
+2. **Move Method**: Methods like `isAvailable` and `getPrice` are moved to the `Product` class.
+3. **Introduce Parameter Object**: The `Product` constructor now takes an object to encapsulate its parameters.
+4. **Remove Duplicated Code**: The logic to find a product by ID is centralized in the `findProductById` method of `ProductInventory`.
+
+This refactoring improves readability and maintainability while ensuring that the external behavior of the code remains the same.

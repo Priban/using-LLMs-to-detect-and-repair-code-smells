@@ -1,0 +1,158 @@
+To improve the readability and maintainability of the code, we can refactor it by simplifying the structure and making the class responsibilities clearer. Here is the refactored code:
+
+### Refactored Code
+
+```javascript
+class Product {
+    constructor(id, name, price, discount) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.discount = discount;
+    }
+
+    get discountedPrice() {
+        return this.price * (1 - this.discount);
+    }
+}
+
+class CartItem {
+    constructor(product, quantity) {
+        this.product = product;
+        this.quantity = quantity;
+    }
+
+    get totalPrice() {
+        return this.product.discountedPrice * this.quantity;
+    }
+}
+
+class ShoppingCart {
+    constructor() {
+        this.items = [];
+    }
+
+    addProduct(product, quantity) {
+        const existingItem = this.items.find(item => item.product.id === product.id);
+        if (existingItem) {
+            existingItem.quantity += quantity;
+        } else {
+            this.items.push(new CartItem(product, quantity));
+        }
+    }
+
+    removeProduct(productId) {
+        this.items = this.items.filter(item => item.product.id !== productId);
+    }
+
+    updateQuantity(productId, quantity) {
+        const item = this.items.find(item => item.product.id === productId);
+        if (item) {
+            item.quantity = quantity;
+        }
+    }
+
+    get totalCost() {
+        return this.items.reduce((total, item) => total + item.totalPrice, 0);
+    }
+}
+
+class API {
+    constructor() {
+        this.shoppingCart = new ShoppingCart();
+    }
+
+    addProductToCart(id, name, price, discount, quantity) {
+        const product = new Product(id, name, price, discount);
+        this.shoppingCart.addProduct(product, quantity);
+    }
+
+    removeProductFromCart(productId) {
+        this.shoppingCart.removeProduct(productId);
+    }
+
+    updateProductQuantity(productId, quantity) {
+        this.shoppingCart.updateQuantity(productId, quantity);
+    }
+
+    getTotalCost() {
+        return this.shoppingCart.totalCost;
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Changes
+
+1. **Simplified Product Class**:
+   - Removed nested structure and directly assigned properties (`id`, `name`, `price`, `discount`).
+   - Added a `discountedPrice` getter to calculate the discounted price.
+
+2. **Simplified CartItem Class**:
+   - Directly accessed the `discountedPrice` from the `Product` class.
+
+3. **Simplified ShoppingCart Class**:
+   - Used `filter` method in `removeProduct` for cleaner removal of items.
+   - Simplified the `addProduct` and `updateQuantity` methods for better readability.
+
+4. **API Class**:
+   - No significant changes were needed here, as it was already straightforward.
+
+### Tests
+
+The test file remains the same, ensuring that the refactored code still passes all tests.
+
+```javascript
+const runDescribe = (API, description) => {
+  describe(description, () => {
+    let api;
+
+    beforeEach(() => {
+      api = new API();
+    });
+
+    test('should add products to the cart and calculate total cost', () => {
+      api.addProductToCart(1, 'Laptop', 1000, 0.1, 1);
+      api.addProductToCart(2, 'Mouse', 50, 0.05, 2);
+
+      const totalCost = api.getTotalCost();
+
+      expect(totalCost).toBeCloseTo(1000 * 0.9 + 50 * 2 * 0.95);
+    });
+
+    test('should update product quantity and recalculate total cost', () => {
+      api.addProductToCart(1, 'Laptop', 1000, 0.1, 1);
+      api.addProductToCart(2, 'Mouse', 50, 0.05, 2);
+      api.updateProductQuantity(2, 1);
+
+      const totalCost = api.getTotalCost();
+
+      expect(totalCost).toBeCloseTo(1000 * 0.9 + 50 * 1 * 0.95);
+    });
+
+    test('should remove product from the cart and recalculate total cost', () => {
+      api.addProductToCart(1, 'Laptop', 1000, 0.1, 1);
+      api.addProductToCart(2, 'Mouse', 50, 0.05, 2);
+      api.removeProductFromCart(1);
+
+      const totalCost = api.getTotalCost();
+
+      expect(totalCost).toBeCloseTo(50 * 2 * 0.95);
+    });
+
+    test('should handle adding the same product multiple times', () => {
+      api.addProductToCart(1, 'Laptop', 1000, 0.1, 1);
+      api.addProductToCart(1, 'Laptop', 1000, 0.1, 2);
+
+      const totalCost = api.getTotalCost();
+
+      expect(totalCost).toBeCloseTo(1000 * 3 * 0.9);
+    });
+  });
+}
+
+module.exports = runDescribe;
+```
+
+This refactored code is more readable and maintainable while ensuring that all tests pass successfully.

@@ -1,0 +1,122 @@
+### Step 1: Identify the Code Smell in the Code
+
+The code contains several code smells:
+1. **Long Function**: The `processOrder` method is quite long and does multiple things.
+2. **Primitive Obsession**: The `paymentMethod` and `shipmentMethod` are checked using string literals.
+3. **Duplicated Code**: The checks for `paymentMethod` and `shipmentMethod` are similar.
+4. **Temporary Field**: The `totalPrice`, `paymentStatus`, and `shipmentStatus` variables are temporary fields that can be refactored.
+
+### Step 2: Write Down the Definition of the Code Smell You Identified
+
+1. **Long Function**: A function that is too long and does too many things, making it hard to understand and maintain.
+2. **Primitive Obsession**: The use of primitive data types to represent domain ideas, leading to code that is harder to understand and maintain.
+3. **Duplicated Code**: Code that is repeated in multiple places, making it harder to maintain.
+4. **Temporary Field**: Variables that are used only within a single method and can be refactored to improve readability.
+
+### Step 3: Refactor the Code
+
+Let's refactor the code to address these issues.
+
+#### Refactored Code
+
+```javascript
+const items = [
+    { id: 1, name: 'Laptop', price: 999, quantity: 10 },
+    { id: 2, name: 'Smartphone', price: 699, quantity: 15 },
+    { id: 3, name: 'Tablet', price: 499, quantity: 20 },
+];
+
+class OrderService {
+    constructor() {
+        this.orders = [];
+    }
+
+    addOrder(orderDetails) {
+        this.orders.push(orderDetails);
+    }
+
+    isItemAvailable(item, quantityOrdered) {
+        return item && item.quantity >= quantityOrdered;
+    }
+
+    isValidPaymentMethod(paymentMethod) {
+        const validPaymentMethods = ['CreditCard', 'PayPal'];
+        return validPaymentMethods.includes(paymentMethod);
+    }
+
+    isValidShipmentMethod(shipmentMethod) {
+        const validShipmentMethods = ['Standard', 'Express'];
+        return validShipmentMethods.includes(shipmentMethod);
+    }
+
+    processOrder(orderDetails, callback) {
+        const item = items.find(item => item.id === orderDetails.itemId);
+        if (!this.isItemAvailable(item, orderDetails.quantityOrdered)) {
+            console.log('Item not available or insufficient quantity.');
+            return false;
+        }
+
+        if (!this.isValidPaymentMethod(orderDetails.paymentMethod)) {
+            console.log('Payment failed.');
+            return false;
+        }
+
+        if (!this.isValidShipmentMethod(orderDetails.shipmentMethod)) {
+            console.log('Shipment failed.');
+            return false;
+        }
+
+        item.quantity -= orderDetails.quantityOrdered;
+        const totalPrice = item.price * orderDetails.quantityOrdered;
+
+        const orderConfirmation = {
+            ...orderDetails,
+            totalPrice,
+            orderDate: new Date().toISOString(),
+            status: 'Confirmed'
+        };
+
+        callback(orderConfirmation);
+        return true;
+    }
+
+    processAllOrders(callback) {
+        for (const order of this.orders) {
+            const result = this.processOrder(order, callback);
+            if (!result) return false;
+        }
+        return true;
+    }
+}
+
+class API {
+    constructor() {
+        this.orderService = new OrderService();
+    }
+
+    addOrder(orderDetails) {
+        this.orderService.addOrder(orderDetails);
+    }
+
+    processOrders(callback) {
+        return this.orderService.processAllOrders(callback);
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring
+
+1. **Extracted Methods**: 
+   - `isItemAvailable`: Checks if the item is available in sufficient quantity.
+   - `isValidPaymentMethod`: Checks if the payment method is valid.
+   - `isValidShipmentMethod`: Checks if the shipment method is valid.
+
+2. **Removed Temporary Fields**: The `totalPrice`, `paymentStatus`, and `shipmentStatus` variables are now calculated directly where needed.
+
+3. **Simplified `processOrder` Method**: The `processOrder` method is now shorter and more readable, focusing on the main logic flow.
+
+4. **Primitive Obsession**: The valid payment and shipment methods are now checked using arrays, making it easier to manage and extend.
+
+The refactored code should still pass all the tests, as the external behavior of the `API` class remains unchanged.

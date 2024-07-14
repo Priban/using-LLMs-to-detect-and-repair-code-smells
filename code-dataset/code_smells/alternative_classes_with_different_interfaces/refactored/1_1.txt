@@ -1,0 +1,128 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Duplicated Code**: The `CreditCardPayment` and `PayPalPayment` classes have similar structures and methods.
+2. **Long Function**: The `processCheckout` method in the `CheckoutService` class is quite long and handles multiple responsibilities.
+3. **Alternative Classes with Different Interfaces**: The `CreditCardPayment` and `PayPalPayment` classes have different method names for similar operations (`processPayment` vs. `executePayment` and `validateCardDetails` vs. `verifyAccount`).
+
+### Step 2: Definition of the Code Smells
+
+1. **Duplicated Code**: This occurs when the same code structure or logic is repeated in multiple places. It makes the code harder to maintain because changes need to be made in multiple places.
+2. **Long Function**: A function that is too long and handles too many responsibilities. It makes the code harder to read and understand.
+3. **Alternative Classes with Different Interfaces**: This occurs when classes that are meant to be used interchangeably have different method names or interfaces, making it harder to use them polymorphically.
+
+### Step 3: Refactor the Code
+
+To address these code smells, we can:
+1. Create a common interface for payment processing.
+2. Refactor the `processCheckout` method to be shorter and more focused.
+3. Remove duplicated code by using inheritance or composition.
+
+Here is the refactored code:
+
+```javascript
+class Payment {
+    constructor(customer, amount) {
+        this.customer = customer;
+        this.amount = amount;
+    }
+
+    processPayment() {
+        throw new Error('processPayment() must be implemented by subclasses');
+    }
+
+    validatePaymentDetails() {
+        throw new Error('validatePaymentDetails() must be implemented by subclasses');
+    }
+}
+
+class CreditCardPayment extends Payment {
+    processPayment() {
+        return { status: 'success', transactionId: 'CC12345XYZ', amount: this.amount, customer: this.customer };
+    }
+
+    validatePaymentDetails() {
+        return true;
+    }
+}
+
+class PayPalPayment extends Payment {
+    processPayment() {
+        return { status: 'success', transactionId: 'PP67890ABC', amount: this.amount, customer: this.customer };
+    }
+
+    validatePaymentDetails() {
+        return this.customer.includes('@');
+    }
+}
+
+class CheckoutService {
+    constructor() {
+        this.checkouts = [];
+    }
+
+    addCheckout(paymentType, paymentDetails) {
+        let paymentProcessor;
+        if (paymentType === 'creditCard') {
+            paymentProcessor = new CreditCardPayment(paymentDetails.customer, paymentDetails.amount);
+        } else if (paymentType === 'paypal') {
+            paymentProcessor = new PayPalPayment(paymentDetails.customer, paymentDetails.amount);
+        } else {
+            console.error('Unsupported payment type');
+            throw new Error('Unsupported payment type');
+        }
+        this.checkouts.push(paymentProcessor);
+    }
+
+    processCheckout(paymentProcessor) {
+        if (paymentProcessor.validatePaymentDetails()) {
+            const paymentResult = paymentProcessor.processPayment();
+            if (paymentResult.status === 'success') {
+                console.log(`Payment processed successfully: Transaction ID ${paymentResult.transactionId}`);
+                return true;
+            }
+        }
+        console.error('Payment processing failed');
+        return false;
+    }
+
+    processAllCheckouts() {
+        try {
+            for (const paymentProcessor of this.checkouts) {
+                if (!this.processCheckout(paymentProcessor)) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (error) {
+            console.error('An error occurred while processing payments');
+            return false;
+        }
+    }
+}
+
+class API {
+    constructor() {
+        this.checkoutService = new CheckoutService();
+    }
+
+    addPayment(paymentType, paymentDetails) {
+        this.checkoutService.addCheckout(paymentType, paymentDetails);
+    }
+
+    processPayments() {
+        return this.checkoutService.processAllCheckouts();
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring
+
+1. **Common Interface**: Created a `Payment` base class with `processPayment` and `validatePaymentDetails` methods that must be implemented by subclasses.
+2. **Remove Duplicated Code**: Moved common properties and methods to the `Payment` base class.
+3. **Shorter Functions**: Refactored `processCheckout` to handle only one payment processor at a time, making it shorter and more focused.
+4. **Consistent Interfaces**: Ensured that both `CreditCardPayment` and `PayPalPayment` implement the same methods (`processPayment` and `validatePaymentDetails`), allowing them to be used interchangeably.
+
+This refactoring improves readability, maintainability, and ensures that the external behavior of the code remains the same.

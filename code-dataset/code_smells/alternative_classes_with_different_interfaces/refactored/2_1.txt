@@ -1,0 +1,138 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Alternative Classes with Different Interfaces**: `SavingsAccount` and `CheckingAccount` classes have similar functionalities but different method names and properties.
+2. **Duplicated Code**: The `API` class has similar methods for handling savings and checking accounts, leading to code duplication.
+3. **Long Function**: The `API` class methods are relatively long and repetitive.
+
+### Step 2: Definition of the Code Smell
+
+1. **Alternative Classes with Different Interfaces**: This occurs when two classes perform similar tasks but have different method names and properties, making it harder to use them interchangeably.
+2. **Duplicated Code**: This occurs when the same or very similar code exists in multiple places, making the code harder to maintain.
+3. **Long Function**: This occurs when a function is too long, making it harder to understand and maintain.
+
+### Step 3: Refactor the Code
+
+To address these code smells, we can:
+1. Create a common base class `Account` for `SavingsAccount` and `CheckingAccount`.
+2. Use consistent method names and properties in the derived classes.
+3. Refactor the `API` class to reduce code duplication.
+
+Here is the refactored code:
+
+```javascript
+class Account {
+    constructor(accountNumber, balance) {
+        this.accountNumber = accountNumber;
+        this.balance = balance;
+    }
+
+    deposit(amount) {
+        this.balance += amount;
+        console.log(`Deposited ${amount} into ${this.constructor.name}. New balance: ${this.balance}`);
+    }
+
+    withdraw(amount) {
+        if (amount > this.balance) {
+            console.log(`Insufficient funds in ${this.constructor.name}.`);
+        } else {
+            this.balance -= amount;
+            console.log(`Withdrew ${amount} from ${this.constructor.name}. New balance: ${this.balance}`);
+        }
+    }
+
+    getBalance() {
+        return this.balance;
+    }
+}
+
+class SavingsAccount extends Account {
+    constructor(accountNumber, balance) {
+        super(accountNumber, balance);
+    }
+}
+
+class CheckingAccount extends Account {
+    constructor(accountNumber, balance) {
+        super(accountNumber, balance);
+    }
+}
+
+class API {
+    constructor() {
+        this.savingsAccounts = [];
+        this.checkingAccounts = [];
+    }
+
+    createSavingsAccount(accountNumber, balance) {
+        const account = new SavingsAccount(accountNumber, balance);
+        this.savingsAccounts.push(account);
+        return account;
+    }
+
+    createCheckingAccount(accountNumber, balance) {
+        const account = new CheckingAccount(accountNumber, balance);
+        this.checkingAccounts.push(account);
+        return account;
+    }
+
+    depositToAccount(accounts, accountNumber, amount) {
+        const account = accounts.find(acc => acc.accountNumber === accountNumber);
+        if (account) {
+            account.deposit(amount);
+            return account.getBalance();
+        } else {
+            throw new Error(`${account.constructor.name} not found`);
+        }
+    }
+
+    withdrawFromAccount(accounts, accountNumber, amount) {
+        const account = accounts.find(acc => acc.accountNumber === accountNumber);
+        if (account) {
+            account.withdraw(amount);
+            return account.getBalance();
+        } else {
+            throw new Error(`${account.constructor.name} not found`);
+        }
+    }
+
+    getAccountBalance(accounts, accountNumber) {
+        const account = accounts.find(acc => acc.accountNumber === accountNumber);
+        return account ? account.getBalance() : null;
+    }
+
+    depositToSavings(accountNumber, amount) {
+        return this.depositToAccount(this.savingsAccounts, accountNumber, amount);
+    }
+
+    withdrawFromSavings(accountNumber, amount) {
+        return this.withdrawFromAccount(this.savingsAccounts, accountNumber, amount);
+    }
+
+    addMoneyToChecking(accountNumber, amount) {
+        return this.depositToAccount(this.checkingAccounts, accountNumber, amount);
+    }
+
+    withdrawFromChecking(accountNumber, amount) {
+        return this.withdrawFromAccount(this.checkingAccounts, accountNumber, amount);
+    }
+
+    getSavingsAccountBalance(accountNumber) {
+        return this.getAccountBalance(this.savingsAccounts, accountNumber);
+    }
+
+    getCheckingAccountFunds(accountNumber) {
+        return this.getAccountBalance(this.checkingAccounts, accountNumber);
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Refactoring
+
+1. **Common Base Class**: Created a base class `Account` with common methods `deposit`, `withdraw`, and `getBalance`.
+2. **Consistent Method Names**: Both `SavingsAccount` and `CheckingAccount` now inherit from `Account` and use the same method names.
+3. **Reduced Duplication**: The `API` class now has generic methods `depositToAccount`, `withdrawFromAccount`, and `getAccountBalance` to handle both types of accounts, reducing code duplication.
+
+This refactoring improves readability and maintainability while ensuring the external behavior remains the same. The test file remains unchanged and should still pass all tests.

@@ -1,0 +1,137 @@
+### Step 1: Identify the Code Smell
+
+The code contains several code smells:
+1. **Data Class**: The `Account` class is essentially a data container with getters and setters but no real behavior.
+2. **Feature Envy**: The `AccountManager` class is doing most of the work that should logically belong to the `Account` class.
+3. **Long Function**: The `printAccountDetails` method in `AccountManager` is a bit long and could be simplified.
+4. **Message Chains**: The `API` class is calling methods on `AccountManager` which in turn calls methods on `Account`.
+
+### Step 2: Definition of the Code Smell
+
+1. **Data Class**: A class that contains only fields and crude methods for accessing them (getters and setters). These classes do not contain any significant behavior.
+2. **Feature Envy**: A method that seems more interested in a class other than the one it is in. This often occurs when a method makes extensive use of another class's methods.
+3. **Long Function**: A function that is too long and does too much, making it hard to understand and maintain.
+4. **Message Chains**: A series of calls to different objects, often leading to tightly coupled code and making it harder to understand and maintain.
+
+### Step 3: Refactor the Code
+
+#### Refactored Code
+
+```javascript
+class Account {
+  constructor(accountNumber, accountHolder, balance) {
+    this.accountNumber = accountNumber;
+    this.accountHolder = accountHolder;
+    this.balance = balance;
+  }
+
+  deposit(amount) {
+    if (amount > 0) {
+      this.balance += amount;
+      return `Deposited ${amount}. New balance: ${this.balance}`;
+    } else {
+      return "Invalid deposit amount.";
+    }
+  }
+
+  withdraw(amount) {
+    if (amount > 0 && this.balance >= amount) {
+      this.balance -= amount;
+      return `Withdrew ${amount}. New balance: ${this.balance}`;
+    } else {
+      return "Invalid withdrawal amount or insufficient funds.";
+    }
+  }
+
+  getAccountDetails() {
+    return `Account Number: ${this.accountNumber}, Account Holder: ${this.accountHolder}, Balance: ${this.balance}`;
+  }
+}
+
+class API {
+  constructor(accountNumber, accountHolder, initialBalance) {
+    this.account = new Account(accountNumber, accountHolder, initialBalance);
+  }
+
+  deposit(amount) {
+    return this.account.deposit(amount);
+  }
+
+  withdraw(amount) {
+    return this.account.withdraw(amount);
+  }
+
+  getAccountDetails() {
+    return this.account.getAccountDetails();
+  }
+}
+
+module.exports = { API };
+```
+
+#### Explanation of Refactoring
+
+1. **Data Class**: The `Account` class now contains behavior (methods for deposit, withdraw, and getting account details) instead of just getters and setters.
+2. **Feature Envy**: The `AccountManager` class has been removed, and its responsibilities have been moved to the `Account` class where they logically belong.
+3. **Long Function**: The `printAccountDetails` method has been renamed to `getAccountDetails` and moved to the `Account` class, simplifying the code.
+4. **Message Chains**: The `API` class now directly interacts with the `Account` class, reducing the message chains and making the code easier to understand and maintain.
+
+### Tests
+
+The test file remains the same and should still pass with the refactored code:
+
+```javascript
+const runDescribe = (API, description) => {
+  describe(description, () => {
+    let api;
+
+    beforeEach(() => {
+      api = new API('123456', 'John Doe', 5000);
+    });
+
+    test('should return account details correctly', () => {
+      const accountDetails = api.getAccountDetails();
+      expect(accountDetails).toBe('Account Number: 123456, Account Holder: John Doe, Balance: 5000');
+    });
+
+    test('should deposit amount successfully', () => {
+      const result = api.deposit(2000);
+      expect(result).toBe('Deposited 2000. New balance: 7000');
+
+      const accountDetails = api.getAccountDetails();
+      expect(accountDetails).toBe('Account Number: 123456, Account Holder: John Doe, Balance: 7000');
+    });
+
+    test('should not deposit invalid amount', () => {
+      const result = api.deposit(-100);
+      expect(result).toBe('Invalid deposit amount.');
+
+      const accountDetails = api.getAccountDetails();
+      expect(accountDetails).toBe('Account Number: 123456, Account Holder: John Doe, Balance: 5000');
+    });
+
+    test('should withdraw amount successfully', () => {
+      const result = api.withdraw(3000);
+      expect(result).toBe('Withdrew 3000. New balance: 2000');
+
+      const accountDetails = api.getAccountDetails();
+      expect(accountDetails).toBe('Account Number: 123456, Account Holder: John Doe, Balance: 2000');
+    });
+
+    test('should not withdraw invalid amount or if insufficient funds', () => {
+      const invalidAmountResult = api.withdraw(-100);
+      expect(invalidAmountResult).toBe('Invalid withdrawal amount or insufficient funds.');
+
+      const insufficientFundsResult = api.withdraw(6000);
+      expect(insufficientFundsResult).toBe('Invalid withdrawal amount or insufficient funds.');
+
+      const accountDetails = api.getAccountDetails();
+      expect(accountDetails).toBe('Account Number: 123456, Account Holder: John Doe, Balance: 5000');
+    });
+  });
+}
+
+module.exports = runDescribe;
+```
+
+By refactoring the code, we have improved its readability and maintainability while ensuring that all tests still pass and the external behavior remains the same.

@@ -1,0 +1,121 @@
+### Step 1: Identify the Code Smell in the Code
+
+The code contains several code smells:
+1. **Long Function**: The `updateCartTotal` method is doing more than one thing (calculating the total and applying a discount).
+2. **Feature Envy**: The `isBlackFriday` method is more about date logic than shopping cart logic.
+3. **Temporary Field**: The `blackFridayDiscount` field is only used temporarily during the calculation of the cart total.
+4. **Large Class**: The `ShoppingCart` class has multiple responsibilities (managing items, calculating totals, applying discounts, and handling checkout).
+
+### Step 2: Definition of the Code Smells
+
+1. **Long Function**: A function that does too many things, making it hard to understand and maintain.
+2. **Feature Envy**: A method that seems more interested in a class other than the one it actually is in.
+3. **Temporary Field**: A field that is only set in certain circumstances and is otherwise empty or null.
+4. **Large Class**: A class that has too many responsibilities, making it difficult to understand and maintain.
+
+### Step 3: Refactor the Code
+
+#### Refactoring Steps:
+
+1. **Extract Method**: Split the `updateCartTotal` method into two methods: one for updating the total and one for applying the discount.
+2. **Move Method**: Move the `isBlackFriday` method to a utility class.
+3. **Remove Temporary Field**: Remove the `blackFridayDiscount` field and calculate the discount directly in the method.
+4. **Extract Class**: Create a `Discount` class to handle discount-related logic.
+
+Here is the refactored code:
+
+```javascript
+class ShoppingCart {
+    constructor() {
+        this.items = [];
+        this.cartTotal = 0;
+    }
+
+    addItem(item) {
+        this.items.push(item);
+        this.updateCartTotal();
+    }
+
+    removeItem(itemId) {
+        const itemIndex = this.items.findIndex(item => item.id === itemId);
+        if (itemIndex !== -1) {
+            this.items.splice(itemIndex, 1);
+            this.updateCartTotal();
+        }
+    }
+
+    updateCartTotal() {
+        this.cartTotal = this.items.reduce((total, currentItem) => {
+            return total + currentItem.price;
+        }, 0);
+
+        this.applyDiscounts();
+    }
+
+    applyDiscounts() {
+        const discount = Discount.calculateBlackFridayDiscount(this.cartTotal);
+        this.cartTotal -= discount;
+    }
+
+    checkout() {
+        if (this.items.length === 0) {
+            console.error('Cannot checkout an empty cart.');
+            return false;
+        }
+
+        console.log(`Processing payment of $${this.cartTotal.toFixed(2)}`);
+        this.items = [];
+        this.cartTotal = 0;
+        return true;
+    }
+}
+
+class Discount {
+    static calculateBlackFridayDiscount(cartTotal) {
+        if (DateUtils.isBlackFriday()) {
+            return cartTotal * 0.1;
+        }
+        return 0;
+    }
+}
+
+class DateUtils {
+    static isBlackFriday() {
+        const today = new Date();
+        return today.getMonth() === 10 && today.getDate() === 26;
+    }
+}
+
+class API {
+    constructor() {
+        this.shoppingCart = new ShoppingCart();
+    }
+
+    addItemToCart(item) {
+        this.shoppingCart.addItem(item);
+    }
+
+    removeItemFromCart(itemId) {
+        this.shoppingCart.removeItem(itemId);
+    }
+
+    checkoutCart() {
+        return this.shoppingCart.checkout();
+    }
+
+    getCartTotal() {
+        return this.shoppingCart.cartTotal;
+    }
+}
+
+module.exports = { API };
+```
+
+### Explanation of Changes:
+
+1. **Extract Method**: The `updateCartTotal` method now only updates the total, and the discount application is handled by a separate `applyDiscounts` method.
+2. **Move Method**: The `isBlackFriday` method is moved to a new `DateUtils` class.
+3. **Remove Temporary Field**: The `blackFridayDiscount` field is removed, and the discount is calculated directly in the `applyDiscounts` method.
+4. **Extract Class**: A new `Discount` class is created to handle discount-related logic, making the `ShoppingCart` class more focused on its primary responsibility.
+
+The refactored code maintains the same external behavior and should pass all the existing tests.

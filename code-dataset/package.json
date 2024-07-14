@@ -1,0 +1,15 @@
+{
+  "name": "code-smells",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "escomplex": "^2.0.0-alpha",
+    "jest": "^29.7.0"
+  }
+}
